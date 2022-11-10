@@ -1,6 +1,4 @@
-﻿using System;
-using System.Diagnostics.Tracing;
-using System.Numerics;
+﻿using System.Numerics;
 using XORFilter.Net.Hashing;
 
 namespace XORFilter.Net
