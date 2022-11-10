@@ -1,4 +1,5 @@
-﻿using System.Numerics;
+﻿using System;
+using System.Numerics;
 using XORFilter.Net.Hashing;
 
 namespace XORFilter.Net
@@ -22,25 +23,24 @@ namespace XORFilter.Net
 
         private Func<byte[], int>[] _hashingFunctions = default!;
 
+        private static readonly Random _random = new ();
+
         protected abstract T FingerPrint(byte[] data);
 
         public void Generate(Span<byte[]> values)
         {
             var tableSize = (int)Math.Ceiling(values.Length * _slotsMultiplier);
             _tableSlots = new T[tableSize];
-
-            //TODO: Handle this more elegantly and provide means to swap hash functions
-            _hashingFunctions = new Func<byte[], int>[]
-            {
-                x => (int)(Adler32.Hash(x) % tableSize),
-                x => (int)(Fnv1A32.Hash(x) % tableSize),
-                x => (int)(Murmur32.Hash(x) % tableSize)
-            };
-
             var peelingOrder = new int[values.Length];
             Array.Fill(peelingOrder, -1);
 
-            Peel(tableSize, values, peelingOrder);
+            InitializeHashFunctions(tableSize);
+
+            while(!Peel(tableSize, values, peelingOrder))
+            {
+                InitializeHashFunctions(tableSize);
+            }
+
             FillTableSlots(tableSize, values, peelingOrder);
         }
 
@@ -61,7 +61,22 @@ namespace XORFilter.Net
             return FingerPrint(value) == xorResult;
         }
 
-        private void Peel(int tableSize, Span<byte[]> values, int[] peelingOrder)
+        private void InitializeHashFunctions(int tableSize)
+        {
+            var seed0 = GenerateSeed();
+            var seed1 = GenerateSeed();
+
+            _hashingFunctions = new Func<byte[], int>[]
+            {
+                x => (int)(XXHash32.Hash(x, seed0) % tableSize),
+                x => (int)(Murmur32.Hash(x, seed1) % tableSize),
+                x => (int)(Fnv1A32.Hash(x) % tableSize)
+            };
+
+            uint GenerateSeed() => (((uint)_random.Next(1 << 30)) << 2) | ((uint)_random.Next(1 << 2));
+        }
+
+        private bool Peel(int tableSize, Span<byte[]> values, int[] peelingOrder)
         {
             var counters = new byte[tableSize];
 
@@ -115,9 +130,11 @@ namespace XORFilter.Net
 
                 if (!peelable)
                 {
-                    throw new NotImplementedException("Need to swap hashes here"); //TODO: NEED TO SWAP HASHES HERE
+                    return false;
                 }
             }
+
+            return true;
         }
 
         private void FillTableSlots(int tableSize, Span<byte[]> values, int[] peelingOrder)

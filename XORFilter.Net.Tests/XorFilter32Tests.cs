@@ -5,14 +5,15 @@ namespace XorFilter.Net.Tests
 {
     public class XorFilter32Tests
     {
-        [Fact]
-        public void Exists()
+        [Theory]
+        [InlineData(10)]
+        [InlineData(100)]
+        [InlineData(1000)]
+        [InlineData(10000)]
+        [InlineData(50000)]
+        public void Exists(int size)
         {
-            /*
-             * TODO: This test is not guaranteed to pass due to the lack of ability to switch hash functions when peeling fails. 
-             */
-
-            var guids = Enumerable.Range(0, 10000).Select(x => Guid.NewGuid().ToString()).ToArray();
+            var guids = Enumerable.Range(0, size).Select(x => Guid.NewGuid().ToString()).ToArray();
 
             var values = guids.Select(Encoding.ASCII.GetBytes).ToArray();
 
