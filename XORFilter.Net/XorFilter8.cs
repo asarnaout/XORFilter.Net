@@ -8,10 +8,5 @@ namespace XORFilter.Net
         {
             return (byte)(Crc32.Hash(data) % (byte.MaxValue + 1));
         }
-
-        protected override byte Xor(byte val1, byte val2)
-        {
-            return (byte)(val1 ^ val2);
-        }
     }
 }

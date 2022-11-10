@@ -3,7 +3,7 @@ using XORFilter.Net.Hashing;
 
 namespace XORFilter.Net
 {
-    public abstract class BaseXorFilter<T> where T : INumber<T>
+    public abstract class BaseXorFilter<T> where T : INumber<T>, IBitwiseOperators<T, T, T>
     {
         private T[] _tableSlots = default!;
 
@@ -21,8 +21,6 @@ namespace XORFilter.Net
         private const double _slotsMultiplier = 1.23d;
 
         private Func<byte[], int>[] _hashingFunctions = default!;
-
-        protected abstract T Xor(T val1, T val2);
 
         protected abstract T FingerPrint(byte[] data);
 
@@ -57,7 +55,7 @@ namespace XORFilter.Net
 
             for (var i = 0; i < _hashingFunctions.Length; i++)
             {
-                xorResult = Xor(xorResult, _tableSlots[_hashingFunctions[i](value)]);
+                xorResult ^= _tableSlots[_hashingFunctions[i](value)];
             }
 
             return FingerPrint(value) == xorResult;
@@ -167,7 +165,7 @@ namespace XORFilter.Net
 
             if (_tableSlots[currentHash] == default && !assignedValues[currentHash] && ((currentHash == altHashA && currentHash == altHashB) || (currentHash != altHashA && currentHash != altHashB)))
             {
-                _tableSlots[currentHash] = Xor(Xor(_tableSlots[altHashA], _tableSlots[altHashB]), FingerPrint(value));
+                _tableSlots[currentHash] = _tableSlots[altHashA] ^ _tableSlots[altHashB] ^ FingerPrint(value);
                 assignedValues[currentHash] = true;
                 assignedValues[altHashA] = true;
                 assignedValues[altHashB] = true;
