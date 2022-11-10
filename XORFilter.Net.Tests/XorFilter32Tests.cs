@@ -12,6 +12,7 @@ namespace XorFilter.Net.Tests
         [InlineData(1000)]
         [InlineData(10000)]
         [InlineData(50000)]
+        [InlineData(100000)]
         public void Exists(int size)
         {
             var guids = Enumerable.Range(0, size).Select(x => Guid.NewGuid().ToString()).ToArray();

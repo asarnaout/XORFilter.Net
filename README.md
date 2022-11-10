@@ -50,7 +50,7 @@ The challenge is in how to fill this table, this is achieved by running a "peeli
 
 To summarize the algorithm implemented in this library:
 
-1 - Initialize the table slots array with a size of 1.23 × (number of values in the set) [To be explained briefly].
+1 - Initialize the table slots array with a size of m = (1.23 × n: number of values in the set) [To be explained briefly].
 
 2 - Choose d = 3 hash functions with a random seed.
 
@@ -64,16 +64,18 @@ To summarize the algorithm implemented in this library:
 
 7 - Reapply the fingerprints of the peeled values in reverse order as follows:
 
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; A - If Slot[h<sub>d<sub>n</sub></sub>(v)] hasn't been assigned before in step 7. <br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; A - If Slot[h<sub>d<sub>x</sub></sub>(v)] hasn't been assigned before in step 7. <br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; B - If EITHER: <br/>
 
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;i. Both h<sub>d<sub>n+1</sub></sub>(v) and h<sub>d<sub>n+2</sub></sub>(v) are equal to h<sub>d<sub>n</sub></sub>(v): If all 3 hashes point to the same slot, then it would be safe to assign the fingerprint directly to the slot since a ⊕ a ⊕ a = a <br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;i. Both h<sub>d<sub>x+1</sub></sub>(v) and h<sub>d<sub>x+2</sub></sub>(v) are equal to h<sub>d<sub>x</sub></sub>(v): If all 3 hashes point to the same slot, then it would be safe to assign the fingerprint directly to the slot since a ⊕ a ⊕ a = a <br/>
 
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ii. h<sub>d<sub>n</sub></sub>(v) != h<sub>d<sub>n+1</sub></sub>(v) AND h<sub>d<sub>n</sub></sub>(v) != h<sub>d<sub>n+2</sub></sub>(v): If any of the two other hashes points to the same slot then it would be unsafe to set the fingerprint directly to that slot since a ⊕ a = 0. In this case it would be safer to assign the hash value to the third slot.
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ii. h<sub>d<sub>n</sub></sub>(v) != h<sub>d<sub>x+1</sub></sub>(v) AND h<sub>d<sub>x</sub></sub>(v) != h<sub>d<sub>x+2</sub></sub>(v): If any of the two other hashes points to the same slot then it would be unsafe to set the fingerprint directly to that slot since a ⊕ a = 0. In this case it would be safer to assign the hash value to the third slot.
 
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; C - Then set Slot[h<sub>d<sub>n</sub></sub>(v)] to Fingerprint(v) <br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; C - Then set Slot[h<sub>d<sub>x</sub></sub>(v)] to Fingerprint(v) <br/>
 
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; D - Repeat till all values are handled.
+
+The choice using m = (1.23 × n: number of values in the set) was made to increase the likelihood of the peeling algorithm's success. Ideally m would be identical to the number of values in the set, however, this makes it highly unlikely to be able to peel away the values. A high value of m would increase the odds of success yet would consume more memory. It was found that for d = 3 (number of hash functions) and n = αm, the probability of success of the peeling algorithm would instantaneously fall from almost 100% likely to succeed to 0 as α becomes greater than 0.81. And therefore α is chosen to be 0.81 giving us m = 1.23n.
 
 To use the XOR Filter, ensure that you choose the correct value of L, a higher value of L would indeed consume more space, however it would decrease the probability of collisions and false positives.
 

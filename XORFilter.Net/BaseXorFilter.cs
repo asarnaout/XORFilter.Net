@@ -7,42 +7,37 @@ namespace XORFilter.Net
     {
         private T[] _tableSlots = default!;
 
-        /// <summary>
-        /// To increase the likelihood of the peeling function's success (its ability to find slots to peel) we can control either d (the number of hash
-        /// functions used) or m (the number of slots).
-        /// 
-        /// A small value of d would cause the table to be un-peelable in case any collisions occur.
-        /// A large value of d would cause too many items to hash to the same slots making the table un-peelable as well.
-        /// 
-        /// Increasing m would increase the likelihood of success however it would also increase memory usage.
-        /// 
-        /// The safest option is to use d = 3 with m = 1.23 x the number of slots.
-        /// </summary>
-        private const double _slotsMultiplier = 1.23d;
-
         private Func<byte[], int>[] _hashingFunctions = default!;
 
         private static readonly Random _random = new ();
 
         protected abstract T FingerPrint(byte[] data);
 
+        /// <summary>
+        /// Generates the xor filter values.
+        /// </summary>
         public void Generate(Span<byte[]> values)
         {
-            var tableSize = (int)Math.Ceiling(values.Length * _slotsMultiplier);
+            var tableSize = (int)Math.Ceiling(values.Length * 1.23d);
             _tableSlots = new T[tableSize];
 
             var peelingOrder = new int[values.Length];
 
-            InitializeHashFunctions(tableSize);
-
-            while(!Peel(tableSize, values, peelingOrder))
+            do
             {
                 InitializeHashFunctions(tableSize);
-            }
+
+            } while (!Peel(tableSize, values, peelingOrder));
 
             FillTableSlots(values, peelingOrder);
         }
 
+        /// <summary>
+        /// Checks whether the byte array value has been previously hashed into the xor filter. Note that there is a possible degree of error that could happen
+        /// based on which filter was chosen (8 vs 16 vs 32).
+        /// </summary>
+        /// <param name="value">The array of bytes that will be checked for membership</param>
+        /// <returns>True if the value was previously added or if there is a collision.</returns>
         public bool IsMember(byte[] value)
         {
             if (_tableSlots is null || _tableSlots is [] || _hashingFunctions is null || _hashingFunctions is [])
@@ -77,39 +72,28 @@ namespace XORFilter.Net
 
         private bool Peel(int tableSize, Span<byte[]> values, int[] peelingOrder)
         {
-            var counters = GetHashingCounters(values);
-
-            var peeledValues = new HashSet<int>();
+            var mapping = GetHashMapping(values);
 
             for (var peelingCounter = 0; peelingCounter < values.Length; peelingCounter++)
             {
-                bool peelable = false;
+                var peelable = false;
 
                 for (var i = 0; i < tableSize && !peelable; i++)
                 {
-                    peelable = counters[i] == 1;
+                    peelable = mapping[i] is not null && mapping[i].Count == 1;
 
-                    if (!peelable) //Peel slots with only one hash referencing them
+                    if (!peelable)
                     {
                         continue;
                     }
 
-                    for (var valuesIndex = 0; valuesIndex < values.Length; valuesIndex++)
+                    var referencingIndex = mapping[i][0];
+                    peelingOrder[peelingCounter] = referencingIndex;
+
+                    for(int j = 0; j < _hashingFunctions.Length; j++)
                     {
-                        int h0 = _hashingFunctions[0](values[valuesIndex]), 
-                            h1 = _hashingFunctions[1](values[valuesIndex]), 
-                            h2 = _hashingFunctions[2](values[valuesIndex]);
-
-                        if ((i == h0 || i == h1 || i == h2) && !peeledValues.Contains(valuesIndex))
-                        {
-                            peelingOrder[peelingCounter] = valuesIndex;
-                            counters[h0]--;
-                            counters[h1]--;
-                            counters[h2]--;
-
-                            peeledValues.Add(valuesIndex);
-                            break;
-                        }
+                        var hashPosition = _hashingFunctions[j](values[referencingIndex]);
+                        mapping[hashPosition].Remove(referencingIndex);
                     }
                 }
 
@@ -121,19 +105,21 @@ namespace XORFilter.Net
 
             return true;
 
-            ushort[] GetHashingCounters(Span<byte[]> values) //The choice to use ushort was made as it guard against the possibility of more than 255 values hashing to the same slot.
+            IList<int>[] GetHashMapping(Span<byte[]> values)
             {
-                var counters = new ushort[tableSize];
+                var mapping = new List<int>[tableSize];
 
                 for (var i = 0; i < values.Length; i++)
                 {
                     for (var j = 0; j <= _hashingFunctions.Length - 1; j++)
                     {
-                        counters[_hashingFunctions[j](values[i])]++;
+                        var hashPosition = _hashingFunctions[j](values[i]);
+                        mapping[hashPosition] ??= new List<int>();
+                        mapping[hashPosition].Add(i);
                     }
                 }
 
-                return counters;
+                return mapping;
             }
         }
 
@@ -165,22 +151,9 @@ namespace XORFilter.Net
 
         private bool TryApplySlotValue(int currentHash, int altHashA, int altHashB, HashSet<int> assignedValues, byte[] value)
         {
-            /*
-             * We need to apply the fingerprint to a slot only if:
-             * - The slot hasn't been previously used. Since this is an array of unsigned numbers, we're using another collection "assignedValues" to keep track of this.
-             * - Either:
-             *          1- All 3 hashes point to the same slot, in this case it would be safe to assign the fingerprint directly to the slot since hn ^ hn ^ hn = hn.
-             *          2- No other hash points to the same slot, if another hash points to the same slot then hn ^ hn = 0 will yield an inaccurate result.
-             *          Ex: For some "val", h0 = 3, h1 = 3, h2 = 5, fingerprint = 7.
-             *          tableSlot#3 = 7
-             *          tableSlot#5 = 0
-             *          
-             *          XorFilter(val) = tableSlot#3 ^ tableSlot#3 ^ tableSlot#5 = 0 (Incorrect result).
-             *          
-             *          In this case tableSlot#5 should be the one assigned the fingerprint.
-             */
-
-            if (_tableSlots[currentHash] == default && !assignedValues.Contains(currentHash) && ((currentHash == altHashA && currentHash == altHashB) || (currentHash != altHashA && currentHash != altHashB)))
+            if (_tableSlots[currentHash] == default 
+                && !assignedValues.Contains(currentHash) 
+                && ((currentHash == altHashA && currentHash == altHashB) || (currentHash != altHashA && currentHash != altHashB)))
             {
                 _tableSlots[currentHash] = _tableSlots[altHashA] ^ _tableSlots[altHashB] ^ FingerPrint(value);
                 assignedValues.Add(currentHash);
