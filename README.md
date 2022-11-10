@@ -46,7 +46,38 @@ Therefore to check if v<sub>0</sub> is a member of the set we calculate that:<br
 
 The challenge is in how to fill this table, this is achieved by running a "peeling" algorithm. Details could be found <a href="https://web.stanford.edu/class/archive/cs/cs166/cs166.1216/lectures/13/Slides13.pdf#page=57">here</a>.
 
+#### Algorithm
+
+To summarize the algorithm implemented in this library:
+
+1 - Initialize the table slots array with a size of 1.23 × (number of values in the set) [To be explained briefly].
+
+2 - Choose d = 3 hash functions with a random seed.
+
+3 - Find a peelable value v<sub>1</sub>, that is a value which hashes to a slot that no other value v<sub>n</sub> hashes to.
+
+4 - If no peelable value exists and the set hasn't been peeled yet then go to step 2.
+
+5 - Otherwise, keep track of the peeling order.
+
+6 - Repeat steps 2 - 6 until no further items are available in the set.
+
+7 - Reapply the fingerprints of the peeled values in reverse order as follows:
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; A - If Slot[h<sub>d<sub>n</sub></sub>(v)] hasn't been assigned before in step 7. <br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; B - If EITHER: <br/>
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;i. Both h<sub>d<sub>n+1</sub></sub>(v) and h<sub>d<sub>n+2</sub></sub>(v) are equal to h<sub>d<sub>n</sub></sub>(v): If all 3 hashes point to the same slot, then it would be safe to assign the fingerprint directly to the slot since a ⊕ a ⊕ a = a <br/>
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ii. h<sub>d<sub>n</sub></sub>(v) != h<sub>d<sub>n+1</sub></sub>(v) AND h<sub>d<sub>n</sub></sub>(v) != h<sub>d<sub>n+2</sub></sub>(v): If any of the two other hashes points to the same slot then it would be unsafe to set the fingerprint directly to that slot since a ⊕ a = 0. In this case it would be safer to assign the hash value to the third slot.
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; C - Then set Slot[h<sub>d<sub>n</sub></sub>(v)] to Fingerprint(v) <br/>
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; D - Repeat till all values are handled.
+
 To use the XOR Filter, ensure that you choose the correct value of L, a higher value of L would indeed consume more space, however it would decrease the probability of collisions and false positives.
+
+#### Usage
 
 To generate the filter:
 

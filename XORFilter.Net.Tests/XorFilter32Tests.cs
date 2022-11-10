@@ -8,6 +8,7 @@ namespace XorFilter.Net.Tests
         [Theory]
         [InlineData(10)]
         [InlineData(100)]
+        [InlineData(500)]
         [InlineData(1000)]
         [InlineData(10000)]
         [InlineData(50000)]
@@ -26,7 +27,12 @@ namespace XorFilter.Net.Tests
                 Assert.True(filter.IsMember(Encoding.ASCII.GetBytes(guids[i])));
             }
 
-            Assert.False(filter.IsMember(Encoding.ASCII.GetBytes("some random string here that I know wont collide")));
+            var randomValues = Enumerable.Range(0, size).Select(x => Guid.NewGuid().ToString()).ToArray();
+
+            for (var i = 0; i < randomValues.Length; i++)
+            {
+                Assert.False(filter.IsMember(Encoding.ASCII.GetBytes(randomValues[i])));
+            }
         }
     }
 }
