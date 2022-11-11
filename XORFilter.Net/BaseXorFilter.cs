@@ -1,6 +1,5 @@
 ﻿using HashDepot;
 using System.Numerics;
-using XORFilter.Net.Hashing;
 
 namespace XORFilter.Net
 {
@@ -20,6 +19,7 @@ namespace XORFilter.Net
         public void Generate(Span<byte[]> values)
         {
             var tableSize = (int)Math.Ceiling(values.Length * 1.23d);
+
             _tableSlots = new T[tableSize];
 
             var peelingOrder = new int[values.Length];
@@ -89,11 +89,13 @@ namespace XORFilter.Net
                     }
 
                     var referencingIndex = mapping[i][0];
+
                     peelingOrder[peelingCounter] = referencingIndex;
 
                     for(int j = 0; j < _hashingFunctions.Length; j++)
                     {
                         var hashPosition = _hashingFunctions[j](values[referencingIndex]);
+
                         mapping[hashPosition].Remove(referencingIndex);
                     }
                 }
