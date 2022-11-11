@@ -1,4 +1,5 @@
-﻿using System.Numerics;
+﻿using HashDepot;
+using System.Numerics;
 using XORFilter.Net.Hashing;
 
 namespace XORFilter.Net
@@ -62,9 +63,9 @@ namespace XORFilter.Net
 
             _hashingFunctions = new Func<byte[], int>[]
             {
-                x => (int)(XXHash32.Hash(x, seed0) % tableSize),
-                x => (int)(Murmur32.Hash(x, seed1) % tableSize),
-                x => (int)(Fnv1A32.Hash(x) % tableSize)
+                x => (int)(XXHash.Hash32(x, seed0) % tableSize),
+                x => (int)(MurmurHash3.Hash32(x, seed1) % tableSize),
+                x => (int)(Fnv1a.Hash32(x) % tableSize)
             };
 
             static uint GenerateSeed() => (((uint)_random.Next(1 << 30)) << 2) | ((uint)_random.Next(1 << 2));

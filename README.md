@@ -93,6 +93,14 @@ var filter = new XorFilter32();
 filter.Generate(values);
 ```
 
+Make sure you use the correct implementation. XorFilter32 will use the most space, however if you are attempting to use the Xor Filter to track set membership for a large collection, then this is the safest option. Otherwise you risk having a non-member having the same fingerprint as a member of the set.
+
+| Implementation | Underlying Type | Probability of Error (ε) |
+| - | - | - |
+| XorFilter8 | byte | 0.00390625% |
+| XorFilter16 | ushort | 0.00001525878% |
+| XorFilter32 | uint | 2.3283064e-10% |
+
 To check set membership simply use the IsMember function:
 
 ```
