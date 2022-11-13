@@ -88,9 +88,7 @@ var myStrings = new string []{ "this", "is", "a collection", "of strings" };
 
 var values = myStrings.Select(Encoding.ASCII.GetBytes).ToArray();
 
-var filter = new XorFilter32();
-
-filter.Generate(values);
+var filter = new XorFilter32(values);
 ```
 
 Make sure you use the correct implementation. XorFilter32 will use the most space, however if you are attempting to use the Xor Filter to track set membership for a large collection, then this is the safest option. Otherwise you risk having a non-member having the same fingerprint as a member of the set.

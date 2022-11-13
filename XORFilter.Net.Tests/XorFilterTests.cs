@@ -20,9 +20,7 @@ namespace XorFilter.Net.Tests
 
             var values = guids.Select(Encoding.ASCII.GetBytes).ToArray();
 
-            var filter = new XorFilter32();
-
-            filter.Generate(values);
+            var filter = new XorFilter32(values);
 
             for (var i = 0; i < guids.Length; i++)
             {
@@ -52,9 +50,7 @@ namespace XorFilter.Net.Tests
                 };
             }
 
-            var filter = new XorFilter16();
-
-            filter.Generate(dummyData.Select(x => x.Serialize()).ToArray());
+            var filter = new XorFilter16(dummyData.Select(x => x.Serialize()).ToArray());
 
             for (var i = 0; i < dummyData.Length; i++)
             {

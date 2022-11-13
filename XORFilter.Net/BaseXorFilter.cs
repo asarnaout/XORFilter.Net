@@ -5,19 +5,19 @@ namespace XORFilter.Net
 {
     public abstract class BaseXorFilter<T> where T : INumber<T>, IBitwiseOperators<T, T, T>
     {
-        private T[] _tableSlots = default!;
+        private readonly T[] _tableSlots = default!;
 
         private Func<byte[], int>[] _hashingFunctions = default!;
 
-        private static readonly Random _random = new ();
+        private readonly Random _random = new ();
 
-        protected abstract T FingerPrint(byte[] data);
-
-        /// <summary>
-        /// Generates the xor filter values.
-        /// </summary>
-        public void Generate(Span<byte[]> values)
+        protected BaseXorFilter(Span<byte[]> values)
         {
+            if(values is [])
+            {
+                throw new ArgumentException("Values array should be provided to generate the XOR Filter.");
+            }
+
             var tableSize = (int)Math.Ceiling(values.Length * 1.23d);
 
             _tableSlots = new T[tableSize];
@@ -41,11 +41,6 @@ namespace XORFilter.Net
         /// <returns>True if the value was previously added or if there is a collision.</returns>
         public bool IsMember(byte[] value)
         {
-            if (_tableSlots is null || _tableSlots is [] || _hashingFunctions is null || _hashingFunctions is [])
-            {
-                return false;
-            }
-
             var xorResult = T.Zero;
 
             for (var i = 0; i < _hashingFunctions.Length; i++)
@@ -55,6 +50,8 @@ namespace XORFilter.Net
 
             return FingerPrint(value) == xorResult;
         }
+
+        protected abstract T FingerPrint(byte[] data);
 
         private void InitializeHashFunctions(int tableSize)
         {
@@ -68,7 +65,7 @@ namespace XORFilter.Net
                 x => (int)(Fnv1a.Hash32(x) % tableSize)
             };
 
-            static uint GenerateSeed() => (((uint)_random.Next(1 << 30)) << 2) | ((uint)_random.Next(1 << 2));
+            uint GenerateSeed() => (((uint)_random.Next(1 << 30)) << 2) | ((uint)_random.Next(1 << 2));
         }
 
         private bool Peel(int tableSize, Span<byte[]> values, out Stack<int> peelingOrder)
@@ -158,23 +155,23 @@ namespace XORFilter.Net
 
                 TryApplySlotValue(h2, h0, h1, assignedValues, value);
             }
-        }
 
-        private bool TryApplySlotValue(int currentHash, int altHashA, int altHashB, HashSet<int> assignedValues, byte[] value)
-        {
-            if (_tableSlots[currentHash] == default 
-                && !assignedValues.Contains(currentHash) 
-                && ((currentHash == altHashA && currentHash == altHashB) || (currentHash != altHashA && currentHash != altHashB)))
+            bool TryApplySlotValue(int currentHash, int altHashA, int altHashB, HashSet<int> assignedValues, byte[] value)
             {
-                _tableSlots[currentHash] = _tableSlots[altHashA] ^ _tableSlots[altHashB] ^ FingerPrint(value);
-                assignedValues.Add(currentHash);
-                assignedValues.Add(altHashA);
-                assignedValues.Add(altHashB);
+                if (_tableSlots[currentHash] == default
+                    && !assignedValues.Contains(currentHash)
+                    && ((currentHash == altHashA && currentHash == altHashB) || (currentHash != altHashA && currentHash != altHashB)))
+                {
+                    _tableSlots[currentHash] = _tableSlots[altHashA] ^ _tableSlots[altHashB] ^ FingerPrint(value);
+                    assignedValues.Add(currentHash);
+                    assignedValues.Add(altHashA);
+                    assignedValues.Add(altHashB);
 
-                return true;
+                    return true;
+                }
+
+                return false;
             }
-
-            return false;
         }
     }
 }
