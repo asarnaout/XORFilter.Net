@@ -1,6 +1,4 @@
-using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
-using System.Xml.Linq;
 using XORFilter.Net;
 
 namespace XorFilter.Net.Tests
@@ -15,6 +13,7 @@ namespace XorFilter.Net.Tests
         [InlineData(10000)]
         [InlineData(50000)]
         [InlineData(100000)]
+        [InlineData(5000000)]
         public void StringMembership(int size)
         {
             var guids = Enumerable.Range(0, size).Select(x => Guid.NewGuid().ToString()).ToArray();

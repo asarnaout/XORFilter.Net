@@ -22,13 +22,13 @@ namespace XORFilter.Net
 
             _tableSlots = new T[tableSize];
 
-            var peelingOrder = new int[values.Length];
+            Stack<int> peelingOrder;
 
             do
             {
                 InitializeHashFunctions(tableSize);
 
-            } while (!Peel(tableSize, values, peelingOrder));
+            } while (!Peel(tableSize, values, out peelingOrder));
 
             FillTableSlots(values, peelingOrder);
         }
@@ -71,42 +71,35 @@ namespace XORFilter.Net
             static uint GenerateSeed() => (((uint)_random.Next(1 << 30)) << 2) | ((uint)_random.Next(1 << 2));
         }
 
-        private bool Peel(int tableSize, Span<byte[]> values, int[] peelingOrder)
+        private bool Peel(int tableSize, Span<byte[]> values, out Stack<int> peelingOrder)
         {
             var mapping = GetHashMapping(values);
 
-            for (var peelingCounter = 0; peelingCounter < values.Length; peelingCounter++)
+            var loneSlots = GetLoneSlots(mapping);
+
+            peelingOrder = new Stack<int>();
+
+            while (loneSlots.TryDequeue(out var loneIndex))
             {
-                var peelable = false;
+                if (mapping[loneIndex].Count != 1) continue;
 
-                for (var i = 0; i < tableSize && !peelable; i++)
+                var referencingSlot = mapping[loneIndex][0];
+                peelingOrder.Push(referencingSlot);
+
+                for (int j = 0; j < _hashingFunctions.Length; j++)
                 {
-                    peelable = mapping[i] is not null && mapping[i].Count == 1;
+                    var hashPosition = _hashingFunctions[j](values[referencingSlot]);
 
-                    if (!peelable)
+                    mapping[hashPosition].Remove(referencingSlot);
+
+                    if (mapping[hashPosition].Count == 1)
                     {
-                        continue;
+                        loneSlots.Enqueue(hashPosition);
                     }
-
-                    var referencingIndex = mapping[i][0];
-
-                    peelingOrder[peelingCounter] = referencingIndex;
-
-                    for(int j = 0; j < _hashingFunctions.Length; j++)
-                    {
-                        var hashPosition = _hashingFunctions[j](values[referencingIndex]);
-
-                        mapping[hashPosition].Remove(referencingIndex);
-                    }
-                }
-
-                if (!peelable)
-                {
-                    return false;
                 }
             }
 
-            return true;
+            return peelingOrder.Count == values.Length;
 
             IList<int>[] GetHashMapping(Span<byte[]> values)
             {
@@ -114,7 +107,7 @@ namespace XORFilter.Net
 
                 for (var i = 0; i < values.Length; i++)
                 {
-                    for (var j = 0; j <= _hashingFunctions.Length - 1; j++)
+                    for (var j = 0; j < _hashingFunctions.Length ; j++)
                     {
                         var hashPosition = _hashingFunctions[j](values[i]);
                         mapping[hashPosition] ??= new List<int>();
@@ -124,15 +117,30 @@ namespace XORFilter.Net
 
                 return mapping;
             }
+
+            Queue<int> GetLoneSlots(IEnumerable<int>[] mappings)
+            {
+                var result = new Queue<int>();
+
+                for (var i = 0; i < mappings.Length; i++)
+                {
+                    if (mappings[i] is not null && mappings[i].Count() == 1)
+                    {
+                        result.Enqueue(i);
+                    }
+                }
+
+                return result;
+            }
         }
 
-        private void FillTableSlots(Span<byte[]> values, int[] peelingOrder)
+        private void FillTableSlots(Span<byte[]> values, Stack<int> peelingOrder)
         {
             var assignedValues = new HashSet<int>();
 
-            for (var i = values.Length - 1; i >= 0; i--)
+            while (peelingOrder.TryPop(out var slotIndex))
             {
-                var value = values[peelingOrder[i]];
+                var value = values[slotIndex];
 
                 int h0 = _hashingFunctions[0](value),
                     h1 = _hashingFunctions[1](value),
