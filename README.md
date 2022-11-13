@@ -2,7 +2,7 @@
 
 ## Overview
 
-This is a .NET implementation of XOR Filters. An XOR Filter is a data structure that holds a lot of similarity to the better known Bloom Filter. 
+This is a .NET implementation of <a href="https://arxiv.org/pdf/1912.08258.pdf">XOR Filters</a>. An XOR Filter is a data structure that holds a lot of similarity to the better known Bloom Filter. 
 
 ### Bloom Filter
 
