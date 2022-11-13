@@ -56,11 +56,11 @@ To summarize the algorithm implemented in this library:
 
 3 - Find a peelable value v<sub>1</sub>, that is a value which hashes to a slot that no other value v<sub>n</sub> hashes to.
 
-4 - If no peelable value exists and the set hasn't been peeled yet then go to step 2.
+4 - If no peelable value exists and the set hasn't been fully peeled yet then go to step 2.
 
 5 - Otherwise, keep track of the peeling order.
 
-6 - Repeat steps 2 - 6 until no further items are available in the set.
+6 - Repeat steps 3 - 5 until no further items are available in the set.
 
 7 - Reapply the fingerprints of the peeled values in reverse order as follows:
 
@@ -93,11 +93,11 @@ var filter = new XorFilter32(values);
 
 Make sure you use the correct implementation. XorFilter32 will use the most space, however if you are attempting to use the Xor Filter to track set membership for a large collection, then this is the safest option. Otherwise you risk having a non-member having the same fingerprint as a member of the set.
 
-| Implementation | Underlying Type | Probability of Error (ε) |
-| - | - | - |
-| XorFilter8 | byte | 0.00390625% |
-| XorFilter16 | ushort | 0.00001525878% |
-| XorFilter32 | uint | 2.3283064e-10% |
+| Implementation | Underlying Type | Probability of Error (ε) | Size in Bits |
+| - | - | - | - |
+| XorFilter8 | byte | 0.00390625% | 1.23 × n × 8 |
+| XorFilter16 | ushort | 0.00001525878% | 1.23 × n × 16 |
+| XorFilter32 | uint | 2.3283064e-10% | 1.23 × n × 32 |
 
 To check set membership simply use the IsMember function:
 
