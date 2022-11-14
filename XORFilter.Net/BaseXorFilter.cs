@@ -83,7 +83,7 @@ namespace XORFilter.Net
                 var referencingSlot = mapping[loneIndex][0];
                 peelingOrder.Push(referencingSlot);
 
-                for (int j = 0; j < _hashingFunctions.Length; j++)
+                for (var j = 0; j < _hashingFunctions.Length; j++)
                 {
                     var hashPosition = _hashingFunctions[j](values[referencingSlot]);
 
