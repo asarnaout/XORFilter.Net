@@ -39,7 +39,7 @@ namespace XorFilter.Net.Tests
         public void SerializedObjectMembership()
         {
             var random = new Random();
-            var dummyData = new PersonDummy[10];
+            var dummyData = new PersonDummy[1000000];
 
             for (var i = 0; i < dummyData.Length; i++)
             {

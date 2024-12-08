@@ -11,8 +11,6 @@ namespace XORFilter.Net
 
         private Func<byte[], int>[] _hashingFunctions = default!;
 
-        private readonly Random _random = new ();
-
         protected BaseXorFilter(Span<byte[]> values)
         {
             if (values is [])
@@ -20,15 +18,13 @@ namespace XORFilter.Net
                 throw new ArgumentException("Values array should be provided to generate the XOR Filter.");
             }
 
-            var tableSize = (int)Math.Ceiling(values.Length * 1.23d);
-
-            _tableSlots = new T[tableSize];
+            _tableSlots = new T[(int)Math.Ceiling(values.Length * 1.23d)];
 
             Stack<int> peelingOrder;
 
             do
             {
-                InitializeHashFunctions(tableSize);
+                InitializeHashFunctions(_tableSlots.Length);
                 GenerateHashes(values);
 
             } while (!TryPeel(values, out peelingOrder));
@@ -58,9 +54,11 @@ namespace XORFilter.Net
 
         private void InitializeHashFunctions(int tableSize)
         {
-            uint seed0 = GenerateSeed(),
-                 seed1 = GenerateSeed(),
-                 seed2 = GenerateSeed();
+            var random = new Random();
+
+            uint seed0 = GenerateSeed(random),
+                 seed1 = GenerateSeed(random),
+                 seed2 = GenerateSeed(random);
 
             var partitionSize = tableSize / 3;
             var remainder = tableSize % 3;
@@ -77,7 +75,7 @@ namespace XORFilter.Net
 
             int GetPartitionedHash(uint hash, int start, int end) => start + (int)(hash % (end - start));
 
-            uint GenerateSeed() => (((uint)_random.Next(1 << 30)) << 2) | ((uint)_random.Next(1 << 2));
+            uint GenerateSeed(Random random) => (((uint)random.Next(1 << 30)) << 2) | ((uint)random.Next(1 << 2));
         }
 
         private void GenerateHashes(Span<byte[]> values)
@@ -182,21 +180,21 @@ namespace XORFilter.Net
             }
 
             _hashesPerValue = default!;
+        }
 
-            bool TryApplySlotValue(int currentHash, int altHashA, int altHashB, HashSet<int> assignedValues, byte[] value)
+        private bool TryApplySlotValue(int currentHash, int altHashA, int altHashB, HashSet<int> assignedValues, byte[] value)
+        {
+            if (_tableSlots[currentHash] == default && !assignedValues.Contains(currentHash))
             {
-                if (_tableSlots[currentHash] == default && !assignedValues.Contains(currentHash))
-                {
-                    _tableSlots[currentHash] = _tableSlots[altHashA] ^ _tableSlots[altHashB] ^ FingerPrint(value);
-                    assignedValues.Add(currentHash);
-                    assignedValues.Add(altHashA);
-                    assignedValues.Add(altHashB);
+                _tableSlots[currentHash] = _tableSlots[altHashA] ^ _tableSlots[altHashB] ^ FingerPrint(value);
+                assignedValues.Add(currentHash);
+                assignedValues.Add(altHashA);
+                assignedValues.Add(altHashB);
 
-                    return true;
-                }
-
-                return false;
+                return true;
             }
+
+            return false;
         }
     }
 }
