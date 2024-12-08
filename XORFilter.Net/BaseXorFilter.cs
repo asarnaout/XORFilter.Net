@@ -58,16 +58,24 @@ namespace XORFilter.Net
 
         private void InitializeHashFunctions(int tableSize)
         {
-            var seed0 = GenerateSeed();
-            var seed1 = GenerateSeed();
-            var seed2 = GenerateSeed();
+            uint seed0 = GenerateSeed(),
+                 seed1 = GenerateSeed(),
+                 seed2 = GenerateSeed();
 
-            _hashingFunctions = 
-            [
-                x => (int)(MurmurHash3.Hash32(x, seed0) % tableSize),
-                x => (int)(MurmurHash3.Hash32(x, seed1) % tableSize),
-                x => (int)(MurmurHash3.Hash32(x, seed2) % tableSize),
+            var partitionSize = tableSize / 3;
+            var remainder = tableSize % 3;
+
+            var partition1End = partitionSize + (remainder > 0 ? 1 : 0); //Remainder can be [0, 1, 2]. If the remainder is greater than 0, then always add 1 to this partition.
+            var partition2End = partition1End + partitionSize + (remainder > 1 ? 1 : 0); //If remainder is 1, then there is no need to add to this partition, we only need to add another 1 here if the remainder is 2.
+
+            _hashingFunctions = [
+            
+                x => GetPartitionedHash(MurmurHash3.Hash32(x, seed0), 0, partition1End),
+                x => GetPartitionedHash(MurmurHash3.Hash32(x, seed1), partition1End, partition2End),
+                x => GetPartitionedHash(MurmurHash3.Hash32(x, seed2), partition2End, tableSize),
             ];
+
+            int GetPartitionedHash(uint hash, int start, int end) => start + (int)(hash % (end - start));
 
             uint GenerateSeed() => (((uint)_random.Next(1 << 30)) << 2) | ((uint)_random.Next(1 << 2));
         }
@@ -78,7 +86,7 @@ namespace XORFilter.Net
 
             for (var i = 0; i < values.Length; i++)
             {
-                for(var j = 0; j < _hashingFunctions.Length; j++)
+                for (var j = 0; j < _hashingFunctions.Length; j++)
                 {
                     _hashesPerValue[i, j] = _hashingFunctions[j](values[i]);
                 }
@@ -97,7 +105,7 @@ namespace XORFilter.Net
             {
                 if (mapping[loneIndex].Count != 1) continue;
 
-                var referencingSlot = mapping[loneIndex][0];
+                var referencingSlot = mapping[loneIndex].First();
                 peelingOrder.Push(referencingSlot);
 
                 for (var j = 0; j < _hashingFunctions.Length; j++)
@@ -114,38 +122,38 @@ namespace XORFilter.Net
             }
 
             return peelingOrder.Count == values.Length;
+        }
 
-            IList<int>[] GetHashMapping(int size)
+        private HashSet<int>[] GetHashMapping(int size)
+        {
+            var mapping = new HashSet<int>[_tableSlots.Length];
+
+            for (var i = 0; i < size; i++)
             {
-                var mapping = new List<int>[_tableSlots.Length];
-
-                for (var i = 0; i < size; i++)
+                for (var j = 0; j < _hashingFunctions.Length ; j++)
                 {
-                    for (var j = 0; j < _hashingFunctions.Length ; j++)
-                    {
-                        var hashPosition = _hashesPerValue[i, j];
-                        mapping[hashPosition] ??= [];
-                        mapping[hashPosition].Add(i);
-                    }
+                    var hashPosition = _hashesPerValue[i, j];
+                    mapping[hashPosition] ??= [];
+                    mapping[hashPosition].Add(i);
                 }
+            }
+            
+            return mapping;
+        }
 
-                return mapping;
+        private static Queue<int> GetLoneSlots(IEnumerable<int>[] mappings)
+        {
+            var result = new Queue<int>();
+
+            for (var i = 0; i < mappings.Length; i++)
+            {
+                if (mappings[i] is not null && mappings[i].Count() == 1)
+                {
+                    result.Enqueue(i);
+                }
             }
 
-            Queue<int> GetLoneSlots(IEnumerable<int>[] mappings)
-            {
-                var result = new Queue<int>();
-
-                for (var i = 0; i < mappings.Length; i++)
-                {
-                    if (mappings[i] is not null && mappings[i].Count() == 1)
-                    {
-                        result.Enqueue(i);
-                    }
-                }
-
-                return result;
-            }
+            return result;
         }
 
         private void FillTableSlots(Span<byte[]> values, Stack<int> peelingOrder)
@@ -177,9 +185,7 @@ namespace XORFilter.Net
 
             bool TryApplySlotValue(int currentHash, int altHashA, int altHashB, HashSet<int> assignedValues, byte[] value)
             {
-                if (_tableSlots[currentHash] == default
-                    && !assignedValues.Contains(currentHash)
-                    && ((currentHash == altHashA && currentHash == altHashB) || (currentHash != altHashA && currentHash != altHashB)))
+                if (_tableSlots[currentHash] == default && !assignedValues.Contains(currentHash))
                 {
                     _tableSlots[currentHash] = _tableSlots[altHashA] ^ _tableSlots[altHashB] ^ FingerPrint(value);
                     assignedValues.Add(currentHash);

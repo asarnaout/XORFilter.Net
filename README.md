@@ -62,16 +62,7 @@ Filling the table involves a “peeling” algorithm. Detailed steps can be foun
 
 7 - Reapply the fingerprints of the peeled values in reverse order as follows:
 
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; A - If Slot[h<sub>d<sub>x</sub></sub>(v)] hasn't been assigned before in step 7. <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; B - If EITHER: <br/>
-
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;i. Both h<sub>d<sub>x+1</sub></sub>(v) and h<sub>d<sub>x+2</sub></sub>(v) are equal to h<sub>d<sub>x</sub></sub>(v): If all 3 hashes point to the same slot, then it would be safe to assign the fingerprint directly to the slot since a ⊕ a ⊕ a = a <br/>
-
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ii. h<sub>d<sub>n</sub></sub>(v) != h<sub>d<sub>x+1</sub></sub>(v) AND h<sub>d<sub>x</sub></sub>(v) != h<sub>d<sub>x+2</sub></sub>(v): If any of the two other hashes points to the same slot then it would be unsafe to set the fingerprint directly to that slot since a ⊕ a = 0. In this case it would be safer to assign the hash value to the third slot.
-
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; C - Then set Slot[h<sub>d<sub>x</sub></sub>(v)] to Fingerprint(v) <br/>
-
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; D - Repeat till all values are handled.
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; - If Slot[h<sub>d<sub>x</sub></sub>(v)] hasn't been assigned before in step 7, then set Slot[h<sub>d<sub>x</sub></sub>(v)] to Fingerprint(v). Repeat until all values are processed. <br/>
 
 The choice of m = 1.23 x n  balances memory usage and algorithm success probability. Larger m values improve the probability of a successful peeling but increase memory consumption. Likewise, choosing a higher value for L reduces collision probability at the expense of additional memory.
 
