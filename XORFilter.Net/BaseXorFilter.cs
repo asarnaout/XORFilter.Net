@@ -6,6 +6,8 @@ namespace XORFilter.Net
     public abstract class BaseXorFilter<T> where T : INumber<T>, IBitwiseOperators<T, T, T>
     {
         private readonly T[] _tableSlots = default!;
+        
+        private int[,] _hashesPerValue = default!;
 
         private Func<byte[], int>[] _hashingFunctions = default!;
 
@@ -13,7 +15,7 @@ namespace XORFilter.Net
 
         protected BaseXorFilter(Span<byte[]> values)
         {
-            if(values is [])
+            if (values is [])
             {
                 throw new ArgumentException("Values array should be provided to generate the XOR Filter.");
             }
@@ -27,8 +29,9 @@ namespace XORFilter.Net
             do
             {
                 InitializeHashFunctions(tableSize);
+                GenerateHashes(values);
 
-            } while (!Peel(tableSize, values, out peelingOrder));
+            } while (!TryPeel(values, out peelingOrder));
 
             FillTableSlots(values, peelingOrder);
         }
@@ -57,20 +60,34 @@ namespace XORFilter.Net
         {
             var seed0 = GenerateSeed();
             var seed1 = GenerateSeed();
+            var seed2 = GenerateSeed();
 
-            _hashingFunctions = new Func<byte[], int>[]
-            {
-                x => (int)(XXHash.Hash32(x, seed0) % tableSize),
+            _hashingFunctions = 
+            [
+                x => (int)(MurmurHash3.Hash32(x, seed0) % tableSize),
                 x => (int)(MurmurHash3.Hash32(x, seed1) % tableSize),
-                x => (int)(Fnv1a.Hash32(x) % tableSize)
-            };
+                x => (int)(MurmurHash3.Hash32(x, seed2) % tableSize),
+            ];
 
             uint GenerateSeed() => (((uint)_random.Next(1 << 30)) << 2) | ((uint)_random.Next(1 << 2));
         }
 
-        private bool Peel(int tableSize, Span<byte[]> values, out Stack<int> peelingOrder)
+        private void GenerateHashes(Span<byte[]> values)
         {
-            var mapping = GetHashMapping(values);
+            _hashesPerValue = new int[values.Length, 3];
+
+            for (var i = 0; i < values.Length; i++)
+            {
+                for(var j = 0; j < _hashingFunctions.Length; j++)
+                {
+                    _hashesPerValue[i, j] = _hashingFunctions[j](values[i]);
+                }
+            }
+        }
+
+        private bool TryPeel(Span<byte[]> values, out Stack<int> peelingOrder)
+        {
+            var mapping = GetHashMapping(values.Length); //An array of arrays tracking which values reference each slot in _tableSlots
 
             var loneSlots = GetLoneSlots(mapping);
 
@@ -85,7 +102,7 @@ namespace XORFilter.Net
 
                 for (var j = 0; j < _hashingFunctions.Length; j++)
                 {
-                    var hashPosition = _hashingFunctions[j](values[referencingSlot]);
+                    var hashPosition = _hashesPerValue[referencingSlot, j];
 
                     mapping[hashPosition].Remove(referencingSlot);
 
@@ -98,16 +115,16 @@ namespace XORFilter.Net
 
             return peelingOrder.Count == values.Length;
 
-            IList<int>[] GetHashMapping(Span<byte[]> values)
+            IList<int>[] GetHashMapping(int size)
             {
-                var mapping = new List<int>[tableSize];
+                var mapping = new List<int>[_tableSlots.Length];
 
-                for (var i = 0; i < values.Length; i++)
+                for (var i = 0; i < size; i++)
                 {
                     for (var j = 0; j < _hashingFunctions.Length ; j++)
                     {
-                        var hashPosition = _hashingFunctions[j](values[i]);
-                        mapping[hashPosition] ??= new List<int>();
+                        var hashPosition = _hashesPerValue[i, j];
+                        mapping[hashPosition] ??= [];
                         mapping[hashPosition].Add(i);
                     }
                 }
@@ -139,9 +156,9 @@ namespace XORFilter.Net
             {
                 var value = values[slotIndex];
 
-                int h0 = _hashingFunctions[0](value),
-                    h1 = _hashingFunctions[1](value),
-                    h2 = _hashingFunctions[2](value);
+                int h0 = _hashesPerValue[slotIndex, 0],
+                    h1 = _hashesPerValue[slotIndex, 1],
+                    h2 = _hashesPerValue[slotIndex, 2];
 
                 if (TryApplySlotValue(h0, h1, h2, assignedValues, value))
                 {
@@ -155,6 +172,8 @@ namespace XORFilter.Net
 
                 TryApplySlotValue(h2, h0, h1, assignedValues, value);
             }
+
+            _hashesPerValue = default!;
 
             bool TryApplySlotValue(int currentHash, int altHashA, int altHashB, HashSet<int> assignedValues, byte[] value)
             {

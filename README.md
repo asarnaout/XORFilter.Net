@@ -2,26 +2,26 @@
 
 ## Overview
 
-This is a .NET implementation of <a href="https://arxiv.org/pdf/1912.08258.pdf">XOR Filters</a>. An XOR Filter is a data structure that holds a lot of similarity to the better known Bloom Filter. 
+This is a .NET implementation of [XOR Filters](https://arxiv.org/pdf/1912.08258.pdf). An XOR Filter is a data structure similar to a Bloom Filter but with distinct advantages in certain scenarios.
 
 ### Bloom Filter
 
-A Bloom Filter is a probabilistic data structure that allows you to quickly verify set membership without consuming much memory. This is done by running *n* hash functions over each value in the given input to retrieve a set of positions in the bit array that will be used, the bloom filter would then set the values at each of those positions which marks a footprint for each of those values in the bit array. 
+A Bloom Filter is a probabilistic data structure that enables fast set membership checks while consuming minimal memory. It operates by applying *n* hash functions to each value in the input, yielding a set of positions in a bit array. These positions are then marked to create a footprint for each value.
 
-Example: Given 3 hash functions f<sub>0</sub>, f<sub>1</sub> and f<sub>2</sub> that map to positions: 3, 4 and 7 when run on a value v<sub>1</sub>, we set those values in the bit array as follows:
+Example: Given three hash functions  f<sub>0</sub>, f<sub>1</sub>, f<sub>2</sub> , which map a value  v<sub>1</sub>  to positions 3, 4, and 7, the bit array would be updated as follows:
 
 | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
 | - | - | - | - | - | - | - | - | - | - |
 | 0 | 0 | 0 | 1 | 1 | 0 | 0 | 1 | 0 | 0 |
 
-And therefore whenever we ask the bloom filter whether v<sub>1</sub> is a member of the set, then we simply re-run f<sub>0</sub>, f<sub>1</sub> and f<sub>2</sub> and verify that the positions at the bit array are all set to 1.
+To check if  v<sub>1</sub>  is in the set, the Bloom Filter re-applies  f<sub>0</sub>, f<sub>1</sub>, f<sub>2</sub>  and verifies that all corresponding positions in the bit array are set to 1.
 
-The problem with Bloom filters is that there is a likely degree of error possible since the corresponding bits to v<sub>1</sub> could have been set by other values (v<sub>2</sub>, v<sub>3</sub>, etc). For example, given that f<sub>x</sub>(v<sub>2</sub>) = 3, f<sub>x</sub>(v<sub>3</sub>) = 4 and f<sub>x</sub>(v<sub>4</sub>) = 7 and given that v<sub>1</sub> was never set in the bloom filter before, therefore if we ask the bloom filter if v<sub>1</sub> is a member, then we shall get a false positive result. This is acceptable in context of working with probabilistic data structures: You can have false positives however you can never have false negatives.
+The Bloom Filter, however, is susceptible to false positives because the same bits could be set by other values (v<sub>2</sub>, v<sub>3</sub>, etc). For instance, if  f<sub>x</sub>(v<sub>2</sub>) = 3, f<sub>x</sub>(v<sub>3</sub>) = 4 and f<sub>x</sub>(v<sub>4</sub>) = 7, the Bloom Filter would incorrectly indicate that  v<sub>1</sub>  is a member. While false positives are possible, Bloom Filters guarantee no false negatives.
 
 
 ### XOR Filter
 
-Same as the bloom filter, the XOR Filter gives us the ability to check set membership without having to keep track of the entire set. With XOR Filter, we keep track of L-bit values rather than single bits. Like bloom filters, we also define n hash functions (h<sub>0</sub>...h<sub>n</sub>) but we also define a *finger printing* function (Fingerprint) that would transform a given value v<sub>1</sub> to an L-bit fingerprint. To check set membership in an XOR Filter, we ensure that the following holds:
+Like the Bloom Filter, the XOR Filter allows set membership checks without storing the entire set. Instead of single bits, it uses L-bit values. The XOR Filter employs *n* hash functions (h<sub>0</sub>, h<sub>1</sub>,...h<sub>n</sub>) and a fingerprinting function that generates an L-bit fingerprint for each value. Set membership is verified by ensuring:
 
 Fingerprint(v<sub>1</sub>) = Slot[h<sub>0</sub>(v<sub>1</sub>)] ⊕ Slot[h<sub>1</sub>(v<sub>1</sub>)] ⊕  ....... ⊕  Slot[h<sub>n</sub>(v<sub>1</sub>)]
 
@@ -39,28 +39,26 @@ Given: <br/>
 | - | - | - | - | - | - | - | - | - | - |
 | 0000 | 0000 | 0000 | 0111 | 1010 | 0000 | 0000 | 1011 | 0000 | 0000 |
 
-Therefore to check if v<sub>0</sub> is a member of the set we calculate that:<br/>
+To verify v<sub>0</sub>'s membership in the set, compute:<br/>
     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Slot[h<sub>0</sub>(v<sub>1</sub>)] ⊕ Slot[h<sub>1</sub>(v<sub>1</sub>)] ⊕ Slot[h<sub>2</sub>(v<sub>1</sub>)]
  = 0111 ⊕ 1010 ⊕ 1011 = 0110 = Fingerprint(v<sub>1</sub>)
 <br/>
 
-The challenge is in how to fill this table, this is achieved by running a "peeling" algorithm. Details could be found <a href="https://web.stanford.edu/class/archive/cs/cs166/cs166.1216/lectures/13/Slides13.pdf#page=57">here</a>.
+#### Peeling
 
-#### Algorithm
+Filling the table involves a “peeling” algorithm. Detailed steps can be found <a href="https://web.stanford.edu/class/archive/cs/cs166/cs166.1216/lectures/13/Slides13.pdf#page=57">here</a>. The library implements the following steps:
 
-To summarize the algorithm implemented in this library:
-
-1 - Initialize the table slots array with a size of m = (1.23 × n: number of values in the set) [To be explained briefly].
+1 - Initialize an array of size m = (1.23 × n), where n = number of values in the set.
 
 2 - Choose d = 3 hash functions with a random seed.
 
 3 - Find a peelable value v<sub>1</sub>, that is a value which hashes to a slot that no other value v<sub>n</sub> hashes to.
 
-4 - If no peelable value exists and the set hasn't been fully peeled yet then go to step 2.
+4 - If no peelable value exists and the set is not fully peeled, return to step 2.
 
 5 - Otherwise, keep track of the peeling order.
 
-6 - Repeat steps 3 - 5 until no further items are available in the set.
+6 - Repeat steps 3 - 5 until all values are processed.
 
 7 - Reapply the fingerprints of the peeled values in reverse order as follows:
 
@@ -75,9 +73,7 @@ To summarize the algorithm implemented in this library:
 
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; D - Repeat till all values are handled.
 
-The choice using m = (1.23 × n: number of values in the set) was made to increase the likelihood of the peeling algorithm's success. Ideally m would be identical to the number of values in the set, however, this makes it highly unlikely to be able to peel away the values. A high value of m would increase the odds of success yet would consume more memory. It was found that for d = 3 (number of hash functions) and n = αm, the probability of success of the peeling algorithm would instantaneously fall from almost 100% likely to succeed to 0 as α becomes greater than 0.81. And therefore α is chosen to be 0.81 giving us m = 1.23n.
-
-To use the XOR Filter, ensure that you choose the correct value of L, a higher value of L would indeed consume more space, however it would decrease the probability of collisions and false positives.
+The choice of m = 1.23 x n  balances memory usage and algorithm success probability. Larger m values improve the probability of a successful peeling but increase memory consumption. Likewise, choosing a higher value for L reduces collision probability at the expense of additional memory.
 
 #### Usage
 
@@ -91,7 +87,7 @@ var values = myStrings.Select(Encoding.ASCII.GetBytes).ToArray();
 var filter = new XorFilter32(values);
 ```
 
-Make sure you use the correct implementation. XorFilter32 will use the most space, however if you are attempting to use the Xor Filter to track set membership for a large collection, then this is the safest option. Otherwise you risk having a non-member having the same fingerprint as a member of the set.
+Choose the appropriate implementation based on the size and requirements of your dataset:
 
 | Implementation | Underlying Type | Probability of Error (ε) | Size in Bits |
 | - | - | - | - |
