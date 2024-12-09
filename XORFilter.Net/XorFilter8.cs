@@ -7,12 +7,17 @@ namespace XORFilter.Net
     /// </summary>
     public sealed class XorFilter8 : BaseXorFilter<byte>
     {
-        /// <summary>
-        /// Generates an XOR filter using L = 8 bits. Provides minimal safety against collisions.
-        /// </summary>
-        /// <param name="values">A collection of byte arrays that will be fingerprinted to generate the XOR filter.</param>
-        public XorFilter8(Span<byte[]> values) : base(values)
+        private XorFilter8(Span<byte[]> values) : base(values)
         {
+        }
+
+        /// <summary>
+        /// Generates an XOR filter using L = 8 bits.
+        /// </summary>
+        /// <param name="values">A collection of byte arrays that will be used to generate the XOR filter.</param>
+        public static XorFilter8 BuildFrom(Span<byte[]> values)
+        {
+            return new XorFilter8(values);
         }
 
         protected override byte FingerPrint(byte[] data)

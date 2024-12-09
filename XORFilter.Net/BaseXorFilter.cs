@@ -18,6 +18,8 @@ namespace XORFilter.Net
                 throw new ArgumentException("Values array should be provided to generate the XOR Filter.");
             }
 
+            values = ToUniqueByteArray(values);
+
             _tableSlots = new T[(int)Math.Ceiling(values.Length * 1.23d)];
 
             Stack<int> peelingOrder;
@@ -51,6 +53,18 @@ namespace XORFilter.Net
         }
 
         protected abstract T FingerPrint(byte[] data);
+
+        private static Span<byte[]> ToUniqueByteArray(Span<byte[]> values)
+        {
+            HashSet<byte[]> hashset = new (new ByteArrayEqualityComparer());
+
+            foreach(var val in values)
+            {
+                hashset.Add(val);
+            }
+
+            return hashset.ToArray();
+        }
 
         private void InitializeHashFunctions(int tableSize)
         {

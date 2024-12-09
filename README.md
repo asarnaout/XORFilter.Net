@@ -51,7 +51,7 @@ Given: <br/>
 | - | - | - | - | - | - | - | - | - | - |
 | 0000 | 0000 | 0000 | 0111 | 1010 | 0000 | 0000 | 1011 | 0000 | 0000 |
 
-To verify v<sub>0</sub>'s membership in the set, compute:<br/>
+To verify v<sub>1</sub>'s membership in the set, compute:<br/>
     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Slot[h<sub>0</sub>(v<sub>1</sub>)] ⊕ Slot[h<sub>1</sub>(v<sub>1</sub>)] ⊕ Slot[h<sub>2</sub>(v<sub>1</sub>)]
  = 0111 ⊕ 1010 ⊕ 1011 = 0110 = Fingerprint(v<sub>1</sub>)
 <br/>
@@ -83,11 +83,19 @@ The choice of m = 1.23 x n  balances memory usage and algorithm success probabil
 To generate the filter:
 
 ```csharp
-var myStrings = new string []{ "this", "is", "a collection", "of strings" };
+var maliciousUrls = new List<string>
+{
+    "getscammednow.com",
+    "malicious-software-is-cool.net",
+    "getrichquickfrfr.org",
+    "legitssncheck.com",
+    "totallylegitcreditcardnumberlookup.com",
+    "getmalwarenow.com"
+};
 
-var values = myStrings.Select(Encoding.ASCII.GetBytes).ToArray();
-
-var filter = new XorFilter32(values);
+var encodedValues = maliciousUrls.Select(Encoding.ASCII.GetBytes).ToArray();
+            
+var filter = XorFilter32.BuildFrom(encodedValues); //The builder method expects a collection of byte arrays
 ```
 
 Choose the appropriate implementation based on the size and requirements of your dataset:
@@ -101,5 +109,5 @@ Choose the appropriate implementation based on the size and requirements of your
 To check set membership simply use the IsMember function:
 
 ```csharp
-filter.IsMember(Encoding.ASCII.GetBytes("is"));
+bool isMaliciousUrl = filter.IsMember(Encoding.ASCII.GetBytes("getrichquickfrfr.org")); //Returns true
 ```
