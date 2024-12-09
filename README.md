@@ -1,12 +1,24 @@
-# XORFilter.Net
+# XORFilter.Net [![NuGet Package](https://img.shields.io/nuget/v/XorFilterDotnet.svg)](https://www.nuget.org/packages/XORFilterDotNet)
 
 ## Overview
 
-This is a .NET implementation of [XOR Filters](https://arxiv.org/pdf/1912.08258.pdf). An XOR Filter is a data structure similar to a Bloom Filter but with distinct advantages in certain scenarios.
+This is a .NET implementation of [XOR Filters](https://arxiv.org/pdf/1912.08258.pdf). An XOR filter is a compact, probabilistic data structure used for approximate membership testing, designed to efficiently determine whether an element is in a set with minimal false-positive rates and better space efficiency than Bloom filters in many cases. Unlike Bloom filters, which use multiple hash functions and bit arrays, XOR filters leverage a combination of XOR operations and hash functions to achieve faster lookups and reduced memory overhead.
 
-### Bloom Filter
+## Installation
 
-A Bloom Filter is a probabilistic data structure that enables fast set membership checks while consuming minimal memory. It operates by applying *n* hash functions to each value in the input, yielding a set of positions in a bit array. These positions are then marked to create a footprint for each value.
+You can install from the package manager console:
+
+`PM> NuGet\Install-Package XORFilterDotNet -Version 1.0.1`
+
+Or from the .NET CLI as:
+
+`dotnet add package XORFilterDotNet --version 1.0.1`
+
+## Bloom Filters
+
+A Bloom Filter is a probabilistic data structure that enables fast set membership checks while consuming minimal memory. A well-known use case for Bloom filters involves efficiently checking whether a URL is part of a large list of prohibited or restricted addresses, such as those flagged for malware, phishing, or policy violations. When a user attempts to access a URL, the system queries the Bloom filter to determine if the URL might be on the restricted list. If the Bloom filter indicates a negative result, the URL is guaranteed to be safe (not restricted), avoiding the need for further checks. If it gives a positive result, it signals that the URL might be restricted, prompting a more precise and computationally intensive check against the full list. This approach significantly reduces the overhead of storing and querying massive URL databases while ensuring rapid responses.
+
+Bloom Filters operate by applying *n* hash functions to each value in the input, yielding a set of positions in a bit array. These positions are then marked to create a footprint for each value.
 
 Example: Given three hash functions  f<sub>0</sub>, f<sub>1</sub>, f<sub>2</sub> , which map a value  v<sub>1</sub>  to positions 3, 4, and 7, the bit array would be updated as follows:
 
@@ -19,14 +31,14 @@ To check if  v<sub>1</sub>  is in the set, the Bloom Filter re-applies  f<sub>0<
 The Bloom Filter, however, is susceptible to false positives because the same bits could be set by other values (v<sub>2</sub>, v<sub>3</sub>, etc). For instance, if  f<sub>x</sub>(v<sub>2</sub>) = 3, f<sub>x</sub>(v<sub>3</sub>) = 4 and f<sub>x</sub>(v<sub>4</sub>) = 7, the Bloom Filter would incorrectly indicate that  v<sub>1</sub>  is a member. While false positives are possible, Bloom Filters guarantee no false negatives.
 
 
-### XOR Filter
+## XOR Filters
 
-Like the Bloom Filter, the XOR Filter allows set membership checks without storing the entire set. Instead of single bits, it uses L-bit values. The XOR Filter employs *n* hash functions (h<sub>0</sub>, h<sub>1</sub>,...h<sub>n</sub>) and a fingerprinting function that generates an L-bit fingerprint for each value. Set membership is verified by ensuring:
+Like the Bloom Filter, the XOR Filter allows set membership checks without storing the entire set. One major difference between the two is that instead of single bits (used in Bloom), XOR Filters use L-bit values. The XOR Filter employs *n* hash functions (h<sub>0</sub>, h<sub>1</sub>,...h<sub>n</sub>) and a fingerprinting function that generates an L-bit fingerprint for each value. Set membership is verified by checking:
 
 Fingerprint(v<sub>1</sub>) = Slot[h<sub>0</sub>(v<sub>1</sub>)] ⊕ Slot[h<sub>1</sub>(v<sub>1</sub>)] ⊕  ....... ⊕  Slot[h<sub>n</sub>(v<sub>1</sub>)]
 
 
-Example:
+### Example:
 
 Given: <br/>
     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; L = 4 <br/>
@@ -44,7 +56,7 @@ To verify v<sub>0</sub>'s membership in the set, compute:<br/>
  = 0111 ⊕ 1010 ⊕ 1011 = 0110 = Fingerprint(v<sub>1</sub>)
 <br/>
 
-#### Peeling
+### Peeling
 
 Filling the table involves a “peeling” algorithm. Detailed steps can be found <a href="https://web.stanford.edu/class/archive/cs/cs166/cs166.1216/lectures/13/Slides13.pdf#page=57">here</a>. The library implements the following steps:
 
@@ -66,11 +78,11 @@ Filling the table involves a “peeling” algorithm. Detailed steps can be foun
 
 The choice of m = 1.23 x n  balances memory usage and algorithm success probability. Larger m values improve the probability of a successful peeling but increase memory consumption. Likewise, choosing a higher value for L reduces collision probability at the expense of additional memory.
 
-#### Usage
+### Usage
 
 To generate the filter:
 
-```
+```csharp
 var myStrings = new string []{ "this", "is", "a collection", "of strings" };
 
 var values = myStrings.Select(Encoding.ASCII.GetBytes).ToArray();
@@ -88,6 +100,6 @@ Choose the appropriate implementation based on the size and requirements of your
 
 To check set membership simply use the IsMember function:
 
-```
+```csharp
 filter.IsMember(Encoding.ASCII.GetBytes("is"));
 ```
