@@ -8,11 +8,11 @@ This is a .NET implementation of [XOR Filters](https://arxiv.org/pdf/1912.08258.
 
 You can install from the package manager console:
 
-`PM> NuGet\Install-Package XORFilterDotNet -Version 1.0.1`
+`PM> NuGet\Install-Package XORFilterDotNet -Version 1.0.5`
 
 Or from the .NET CLI as:
 
-`dotnet add package XORFilterDotNet --version 1.0.1`
+`dotnet add package XORFilterDotNet --version 1.0.5`
 
 ## Bloom Filters
 
