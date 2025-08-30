@@ -19,7 +19,7 @@ public abstract class BaseXorFilter<T> where T : INumber<T>, IBitwiseOperators<T
     internal Func<byte[], int>[] HashingFunctions => _hashingFunctions;
     internal int[,] HashesPerValue => _hashesPerValue;
 
-    protected internal BaseXorFilter(Span<byte[]> values)
+    protected internal BaseXorFilter(Span<byte[]> values, int? seed = null)
     {
         if (values is [])
         {
@@ -47,7 +47,7 @@ public abstract class BaseXorFilter<T> where T : INumber<T>, IBitwiseOperators<T
             // Try multiple hash functions at current table size
             while (retriesAtCurrentSize < retriesBeforeResize && retryCount < maxRetries)
             {
-                InitializeHashFunctions(_tableSlots.Length);
+                InitializeHashFunctions(_tableSlots.Length, seed);
                 GenerateHashes(values);
 
                 if (TryPeel(values, out peelingOrder))
@@ -112,9 +112,9 @@ public abstract class BaseXorFilter<T> where T : INumber<T>, IBitwiseOperators<T
         return hashset.ToArray();
     }
 
-    internal void InitializeHashFunctions(int tableSize)
+    internal void InitializeHashFunctions(int tableSize, int? seed = null)
     {
-        var random = new Random();
+        var random = seed.HasValue ? new Random(seed.Value) : new Random();
 
         uint seed0 = GenerateSeed(random),
              seed1 = GenerateSeed(random),

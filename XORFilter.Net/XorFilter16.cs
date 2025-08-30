@@ -7,7 +7,7 @@ namespace XORFilter.Net
     /// </summary>
     public class XorFilter16 : BaseXorFilter<ushort>
     {
-        private XorFilter16(Span<byte[]> values) : base(values)
+        private XorFilter16(Span<byte[]> values, int? seed = null) : base(values, seed)
         {
         }
 
@@ -15,9 +15,10 @@ namespace XORFilter.Net
         /// Generates an XOR filter using L = 16 bits.
         /// </summary>
         /// <param name="values">A collection of byte arrays that will be used to generate the XOR filter.</param>
-        public static XorFilter16 BuildFrom(Span<byte[]> values)
+        /// <param name="seed">Optional random seed for deterministic filter generation.</param>
+        public static XorFilter16 BuildFrom(Span<byte[]> values, int? seed = null)
         {
-            return new XorFilter16(values);
+            return new XorFilter16(values, seed);
         }
 
         protected override ushort FingerPrint(byte[] data)
