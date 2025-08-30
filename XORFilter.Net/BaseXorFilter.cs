@@ -22,7 +22,7 @@ namespace XORFilter.Net
 
             _tableSlots = new T[(int)Math.Ceiling(values.Length * 1.23d)];
 
-            Stack<int> peelingOrder;
+            Stack<(int indexToPeel, int loneSlotIndex)> peelingOrder;
 
             do
             {
@@ -105,20 +105,20 @@ namespace XORFilter.Net
             }
         }
 
-        private bool TryPeel(Span<byte[]> values, out Stack<int> peelingOrder)
+        private bool TryPeel(Span<byte[]> values, out Stack<(int indexToPeel, int loneSlotIndex)> peelingOrder)
         {
             var mapping = GetHashMapping(values.Length); //An array of arrays tracking which values reference each slot in _tableSlots
 
             var loneSlots = GetLoneSlots(mapping);
 
-            peelingOrder = new Stack<int>();
+            peelingOrder = new Stack<(int indexToPeel, int loneSlotIndex)>();
 
             while (loneSlots.TryDequeue(out var loneIndex))
             {
                 if (mapping[loneIndex].Count != 1) continue;
 
                 var referencingSlot = mapping[loneIndex].First();
-                peelingOrder.Push(referencingSlot);
+                peelingOrder.Push((referencingSlot, loneIndex));
 
                 for (var j = 0; j < _hashingFunctions.Length; j++)
                 {
@@ -168,47 +168,40 @@ namespace XORFilter.Net
             return result;
         }
 
-        private void FillTableSlots(Span<byte[]> values, Stack<int> peelingOrder)
+        private void FillTableSlots(Span<byte[]> values, Stack<(int indexToPeel, int loneSlotIndex)> peelingOrder)
         {
-            var assignedValues = new HashSet<int>();
-
-            while (peelingOrder.TryPop(out var slotIndex))
+            while (peelingOrder.TryPop(out var peeled))
             {
-                var value = values[slotIndex];
+                var (indexToPeel, loneSlotIndex) = peeled;
 
-                int h0 = _hashesPerValue[slotIndex, 0],
-                    h1 = _hashesPerValue[slotIndex, 1],
-                    h2 = _hashesPerValue[slotIndex, 2];
+                var value = values[indexToPeel];
 
-                if (TryApplySlotValue(h0, h1, h2, assignedValues, value))
+                int h0 = _hashesPerValue[indexToPeel, 0],
+                    h1 = _hashesPerValue[indexToPeel, 1],
+                    h2 = _hashesPerValue[indexToPeel, 2];
+
+                int altHashA, altHashB;
+
+                if (loneSlotIndex == h0)
                 {
-                    continue;
+                    altHashA = h1;
+                    altHashB = h2;
+                }
+                else if (loneSlotIndex == h1)
+                {
+                    altHashA = h0;
+                    altHashB = h2;
+                }
+                else
+                {
+                    altHashA = h0;
+                    altHashB = h1;
                 }
 
-                if (TryApplySlotValue(h1, h0, h2, assignedValues, value))
-                {
-                    continue;
-                }
-
-                TryApplySlotValue(h2, h0, h1, assignedValues, value);
+                _tableSlots[loneSlotIndex] = _tableSlots[altHashA] ^ _tableSlots[altHashB] ^ FingerPrint(value);
             }
 
             _hashesPerValue = default!;
-        }
-
-        private bool TryApplySlotValue(int currentHash, int altHashA, int altHashB, HashSet<int> assignedValues, byte[] value)
-        {
-            if (_tableSlots[currentHash] == default && !assignedValues.Contains(currentHash))
-            {
-                _tableSlots[currentHash] = _tableSlots[altHashA] ^ _tableSlots[altHashB] ^ FingerPrint(value);
-                assignedValues.Add(currentHash);
-                assignedValues.Add(altHashA);
-                assignedValues.Add(altHashB);
-
-                return true;
-            }
-
-            return false;
         }
     }
 }
