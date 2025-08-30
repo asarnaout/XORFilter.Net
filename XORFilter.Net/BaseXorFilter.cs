@@ -8,7 +8,7 @@ namespace XORFilter.Net;
 
 public abstract class BaseXorFilter<T> where T : INumber<T>, IBitwiseOperators<T, T, T>
 {
-    private readonly T[] _tableSlots = default!;
+    private T[] _tableSlots = default!;
 
     private int[,] _hashesPerValue = default!;
 
@@ -30,16 +30,52 @@ public abstract class BaseXorFilter<T> where T : INumber<T>, IBitwiseOperators<T
 
         // Ensure at least 3 slots so each of the three partitions has non-zero width
         var computedSize = (int)Math.Ceiling(values.Length * 1.23d);
-        _tableSlots = new T[Math.Max(3, computedSize)];
+        var currentTableSize = Math.Max(3, computedSize);
 
-        Stack<(int indexToPeel, int loneSlotIndex)> peelingOrder;
+        Stack<(int indexToPeel, int loneSlotIndex)> peelingOrder = new();
+        const int maxRetries = 1000; // Prevent infinite loops
+        const int retriesBeforeResize = 100; // Try resizing after this many failures
+        var retryCount = 0;
 
-        do
+        while (true)
         {
-            InitializeHashFunctions(_tableSlots.Length);
-            GenerateHashes(values);
+            _tableSlots = new T[currentTableSize];
 
-        } while (!TryPeel(values, out peelingOrder));
+            var retriesAtCurrentSize = 0;
+            bool peelingSuccessful = false;
+
+            // Try multiple hash functions at current table size
+            while (retriesAtCurrentSize < retriesBeforeResize && retryCount < maxRetries)
+            {
+                InitializeHashFunctions(_tableSlots.Length);
+                GenerateHashes(values);
+
+                if (TryPeel(values, out peelingOrder))
+                {
+                    peelingSuccessful = true;
+                    break;
+                }
+
+                retriesAtCurrentSize++;
+                retryCount++;
+            }
+
+            if (peelingSuccessful)
+            {
+                break;
+            }
+
+            if (retryCount >= maxRetries)
+            {
+                throw new InvalidOperationException(
+                    $"Failed to construct XOR filter after {maxRetries} attempts. " +
+                    $"Input size: {values.Length}, Final table size: {currentTableSize}. " +
+                    "Consider using a different filter type or reducing input size.");
+            }
+
+            // Increase table size and try again
+            currentTableSize = (int)Math.Ceiling(currentTableSize * 1.15d);
+        }
 
         FillTableSlots(values, peelingOrder);
     }

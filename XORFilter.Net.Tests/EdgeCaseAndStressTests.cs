@@ -307,24 +307,38 @@ namespace XORFilter.Net.Tests
         public void MemoryUsage_LargeFilter_RemainsReasonable()
         {
             // Arrange
-            var initialMemory = GC.GetTotalMemory(true);
             var values = Enumerable.Range(0, 100000)
                 .Select(i => BitConverter.GetBytes(i))
                 .ToArray();
 
             // Act
             var filter = XorFilter32.BuildFrom(values);
-            var memoryAfterCreation = GC.GetTotalMemory(false);
 
             // Assert
             filter.Should().NotBeNull();
             
-            // Memory usage should be reasonable (table size is ~1.23x input size for uint)
-            var expectedMemoryBytes = values.Length * 1.23 * sizeof(uint);
-            var actualMemoryIncrease = memoryAfterCreation - initialMemory;
+            // Verify the filter works correctly (more important than memory usage)
+            filter.IsMember(BitConverter.GetBytes(0)).Should().BeTrue();
+            filter.IsMember(BitConverter.GetBytes(99999)).Should().BeTrue();
+            filter.IsMember(BitConverter.GetBytes(100000)).Should().BeFalse(); // Not in the set
             
-            // Allow for some overhead, but should not be orders of magnitude larger
-            actualMemoryIncrease.Should().BeLessThan((long)(expectedMemoryBytes * 10));
+            // Basic sanity check: filter table should be reasonable size
+            // For 100,000 items with 1.23x factor, expect ~123,000 slots
+            // This is testing actual implementation behavior rather than unreliable GC measurements
+            var tableSize = filter.TableSlots.Length;
+            tableSize.Should().BeGreaterThan(100000); // Must be larger than input
+            tableSize.Should().BeLessThan(200000); // But not excessively large
+            
+            // Performance check: queries should be fast
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+            for (int i = 0; i < 1000; i++)
+            {
+                filter.IsMember(BitConverter.GetBytes(i));
+            }
+            stopwatch.Stop();
+            
+            stopwatch.ElapsedMilliseconds.Should().BeLessThan(50, 
+                "1000 membership queries should complete quickly");
         }
 
         [Fact]

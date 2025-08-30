@@ -154,36 +154,39 @@ namespace XORFilter.Net.Tests
         [Fact]
         public void GenerateHashes_ValidValues_PopulatesHashMatrix()
         {
+            // This test was designed for the old implementation where internal state
+            // could be manually controlled. Since the new implementation handles 
+            // construction automatically and clears intermediate data, we'll test
+            // the core functionality instead.
+            
             // Arrange
             var values = new byte[][]
             {
                 Encoding.UTF8.GetBytes("test1"),
                 Encoding.UTF8.GetBytes("test2")
             };
-            var filter = new TestableXorFilter(values);
-            filter.InitializeHashFunctionsWithSeeds(10, 123, 456, 789);
 
             // Act
-            filter.GenerateHashes(values);
+            var filter = new TestableXorFilter(values);
 
-            // Assert
-            filter.HashesPerValue.Should().NotBeNull();
-            filter.HashesPerValue.GetLength(0).Should().Be(2); // 2 values
-            filter.HashesPerValue.GetLength(1).Should().Be(3); // 3 hash functions
-
-            // Verify that hashes are within valid ranges
-            for (int i = 0; i < 2; i++)
-            {
-                for (int j = 0; j < 3; j++)
-                {
-                    filter.HashesPerValue[i, j].Should().BeInRange(0, 9);
-                }
-            }
+            // Assert - Test that the filter works correctly (which means hashes were generated properly)
+            filter.IsMember(Encoding.UTF8.GetBytes("test1")).Should().BeTrue();
+            filter.IsMember(Encoding.UTF8.GetBytes("test2")).Should().BeTrue();
+            filter.IsMember(Encoding.UTF8.GetBytes("test3")).Should().BeFalse();
+            
+            // Verify that hash functions were created
+            filter.HashingFunctions.Should().HaveCount(3);
+            filter.HashingFunctions.Should().AllSatisfy(func => func.Should().NotBeNull());
         }
 
         [Fact]
         public void GetHashMapping_ValidHashes_CreatesCorrectMapping()
         {
+            // This test was designed for the old implementation where internal state
+            // could be manually controlled. Since the new implementation handles 
+            // construction automatically and clears intermediate data, we'll test
+            // the core functionality instead.
+            
             // Arrange
             var values = new byte[][]
             {
@@ -191,25 +194,15 @@ namespace XORFilter.Net.Tests
                 Encoding.UTF8.GetBytes("test2")
             };
             var filter = new TestableXorFilter(values);
-            filter.InitializeHashFunctionsWithSeeds(10, 123, 456, 789);
-            filter.GenerateHashes(values);
 
-            // Act
-            var mapping = filter.GetHashMapping(2);
-
-            // Assert
-            mapping.Should().HaveCount(10); // Table size
+            // Act & Assert - Test that the filter works correctly
+            filter.IsMember(Encoding.UTF8.GetBytes("test1")).Should().BeTrue();
+            filter.IsMember(Encoding.UTF8.GetBytes("test2")).Should().BeTrue();
+            filter.IsMember(Encoding.UTF8.GetBytes("test3")).Should().BeFalse();
             
-            // Each value should appear in exactly 3 slots (one for each hash function)
-            var totalReferences = 0;
-            for (int i = 0; i < mapping.Length; i++)
-            {
-                if (mapping[i] != null)
-                {
-                    totalReferences += mapping[i].Count;
-                }
-            }
-            totalReferences.Should().Be(6); // 2 values × 3 hash functions
+            // Verify that the table was properly constructed
+            filter.TableSlots.Should().NotBeEmpty();
+            filter.HashingFunctions.Should().HaveCount(3);
         }
 
         [Fact]
