@@ -266,6 +266,79 @@ namespace XORFilter.Net.Tests
             filter.Should().NotBeNull();
             filter.IsMember(baseValue).Should().BeTrue();
         }
+
+        [Fact]
+        public void BuildFrom_HashCollisionProne_HandlesCorrectly()
+        {
+            // Arrange - Create values that are likely to produce similar hash values
+            var values = new List<byte[]>();
+            
+            // Add systematic patterns that might cause hash collisions
+            for (int i = 0; i < 100; i++)
+            {
+                values.Add(BitConverter.GetBytes(i));
+                values.Add(BitConverter.GetBytes(i + 65536)); // +2^16
+                values.Add(BitConverter.GetBytes(i + 131072)); // +2^17
+            }
+
+            // Act
+            var filter = XorFilter32.BuildFrom(values.ToArray());
+
+            // Assert
+            filter.Should().NotBeNull();
+            
+            // Verify all values are correctly stored
+            foreach (var value in values)
+            {
+                filter.IsMember(value).Should().BeTrue();
+            }
+        }
+
+        [Fact] 
+        public void BuildFrom_OnlyNullBytes_HandlesCorrectly()
+        {
+            // Arrange - Arrays containing only null bytes
+            var values = new byte[][]
+            {
+                new byte[] { 0 },
+                new byte[] { 0, 0 },
+                new byte[] { 0, 0, 0 },
+                new byte[] { 0, 0, 0, 0 }
+            };
+
+            // Act
+            var filter = XorFilter32.BuildFrom(values);
+
+            // Assert
+            filter.Should().NotBeNull();
+            foreach (var value in values)
+            {
+                filter.IsMember(value).Should().BeTrue();
+            }
+        }
+
+        [Fact]
+        public void BuildFrom_AlternatingPatterns_HandlesCorrectly()
+        {
+            // Arrange - Patterns that might cause issues in hash distribution
+            var values = new List<byte[]>();
+            
+            for (int i = 0; i < 100; i++)
+            {
+                values.Add(new byte[] { (byte)(i % 2 == 0 ? 0xAA : 0x55) });
+                values.Add(new byte[] { (byte)(i % 2 == 0 ? 0xFF : 0x00) });
+            }
+
+            // Act
+            var filter = XorFilter32.BuildFrom(values.ToArray());
+
+            // Assert
+            filter.Should().NotBeNull();
+            foreach (var value in values)
+            {
+                filter.IsMember(value).Should().BeTrue();
+            }
+        }
     }
 
     /// <summary>
@@ -426,6 +499,59 @@ namespace XORFilter.Net.Tests
             {
                 filter.IsMember(value).Should().BeTrue();
             }
+        }
+
+        [Fact]
+        public void BuildFrom_ConstructionRetryMechanism_WorksCorrectly()
+        {
+            // Arrange - Create a moderately sized set that might require retries
+            var values = Enumerable.Range(0, 500)
+                .Select(i => BitConverter.GetBytes(i))
+                .ToArray();
+
+            // Act - Multiple constructions to test retry mechanism variability
+            var filters = new List<XorFilter32>();
+            var constructionTimes = new List<long>();
+
+            for (int attempt = 0; attempt < 5; attempt++)
+            {
+                var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+                var filter = XorFilter32.BuildFrom(values);
+                stopwatch.Stop();
+
+                filters.Add(filter);
+                constructionTimes.Add(stopwatch.ElapsedMilliseconds);
+            }
+
+            // Assert
+            filters.Should().AllSatisfy(filter =>
+            {
+                filter.Should().NotBeNull();
+                // Verify the filter works correctly
+                filter.IsMember(BitConverter.GetBytes(0)).Should().BeTrue();
+                filter.IsMember(BitConverter.GetBytes(499)).Should().BeTrue();
+                filter.IsMember(BitConverter.GetBytes(500)).Should().BeFalse();
+            });
+
+            // All constructions should complete in reasonable time
+            constructionTimes.Should().AllSatisfy(time => time.Should().BeLessThan(30000));
+        }
+
+        [Fact]
+        public void BuildFrom_VerySmallTableSizes_HandlesProperly()
+        {
+            // This test verifies behavior with very small inputs that result in minimum table sizes
+            
+            // Arrange - Single item (will create minimum table size of 3)
+            var singleValue = new byte[][] { Encoding.UTF8.GetBytes("single") };
+
+            // Act
+            var filter = XorFilter32.BuildFrom(singleValue);
+
+            // Assert
+            filter.Should().NotBeNull();
+            filter.IsMember(Encoding.UTF8.GetBytes("single")).Should().BeTrue();
+            filter.IsMember(Encoding.UTF8.GetBytes("other")).Should().BeFalse();
         }
     }
 

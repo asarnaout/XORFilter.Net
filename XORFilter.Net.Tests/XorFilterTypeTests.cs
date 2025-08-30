@@ -467,5 +467,59 @@ namespace XORFilter.Net.Tests
 
             // Generally rate32 <= rate16 <= rate8 (though not guaranteed due to randomness)
         }
+
+        [Fact]
+        public void XorFilter8_FalsePositiveRate_WithinExpectedBounds()
+        {
+            // Arrange
+            var addedValues = Enumerable.Range(0, 10000)
+                .Select(i => Encoding.UTF8.GetBytes($"added_{i}"))
+                .ToArray();
+
+            var testValues = Enumerable.Range(0, 10000)
+                .Select(i => Encoding.UTF8.GetBytes($"test_{i}_{Guid.NewGuid()}"))
+                .ToArray();
+
+            var filter = XorFilter8.BuildFrom(addedValues);
+
+            // Act
+            var falsePositives = testValues.Count(v => filter.IsMember(v));
+
+            // Assert
+            var actualRate = (double)falsePositives / testValues.Length;
+            
+            // XorFilter8 theoretical error rate is ~0.390625%
+            // With large sample, should be close to theoretical value
+            actualRate.Should().BeLessThan(0.02); // Should be well under 2%
+            actualRate.Should().BeGreaterThan(0.0); // Should have some false positives
+        }
+
+        [Fact]
+        public void XorFilter16_FalsePositiveRate_LowerThanXorFilter8()
+        {
+            // Arrange
+            var addedValues = Enumerable.Range(0, 5000)
+                .Select(i => Encoding.UTF8.GetBytes($"added_{i}"))
+                .ToArray();
+
+            var testValues = Enumerable.Range(0, 5000)
+                .Select(i => Encoding.UTF8.GetBytes($"test_{i}_{Guid.NewGuid()}"))
+                .ToArray();
+
+            var filter8 = XorFilter8.BuildFrom(addedValues);
+            var filter16 = XorFilter16.BuildFrom(addedValues);
+
+            // Act
+            var falsePositives8 = testValues.Count(v => filter8.IsMember(v));
+            var falsePositives16 = testValues.Count(v => filter16.IsMember(v));
+
+            // Assert
+            var rate8 = (double)falsePositives8 / testValues.Length;
+            var rate16 = (double)falsePositives16 / testValues.Length;
+
+            // XorFilter16 should generally have lower false positive rate than XorFilter8
+            rate16.Should().BeLessThan(rate8 + 0.01); // Allow some variance due to randomness
+            rate16.Should().BeLessThan(0.01); // Should be less than 1%
+        }
     }
 }
