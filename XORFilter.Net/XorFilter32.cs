@@ -5,7 +5,7 @@ namespace XORFilter.Net
     /// <summary>
     /// Uses L = 32 bits to assign the table slots. Probability of error ε ≈ 2.3283064e-8%
     /// </summary>
-    public sealed class XorFilter32 : BaseXorFilter<uint>
+    public class XorFilter32 : BaseXorFilter<uint>
     {
         private XorFilter32(Span<byte[]> values) : base(values)
         {
