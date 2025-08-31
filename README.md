@@ -21,20 +21,20 @@ XORFilter.Net is a .NET implementation of XOR filters, a family of probabilistic
 - Very small: about 1.23 × n slots of L-bit fingerprints
 - Choice of fingerprint width: 8, 16, or 32 bits to tune false-positive rate
 - Deterministic builds via optional seed
-- Thread-safe lookups after construction
+- Thread-safe lookups after filter construction
 
 ## Installation
 
 Package Manager:
 
 ```
-PM> NuGet\Install-Package XORFilterDotNet -Version 1.0.5
+PM> NuGet\Install-Package XORFilterDotNet -Version 1.0.6
 ```
 
 .NET CLI:
 
 ```
-dotnet add package XORFilterDotNet --version 1.0.5
+dotnet add package XORFilterDotNet --version 1.0.6
 ```
 
 ## Quickstart
@@ -47,12 +47,12 @@ using XORFilter.Net;
 
 var maliciousUrls = new List<string>
 {
-    "getscammednow.com",
-    "malicious-software-is-cool.net",
-    "getrichquickfrfr.org",
-    "legitssncheck.com",
-    "totallylegitcreditcardnumberlookup.com",
-    "getmalwarenow.com"
+    "phishing.example",
+    "malware.example",
+    "fraud.example",
+    "credential-theft.example",
+    "drive-by-download.example",
+    "suspicious-site.example"
 };
 
 var encodedValues = maliciousUrls.Select(Encoding.UTF8.GetBytes).ToArray();
@@ -60,14 +60,8 @@ var encodedValues = maliciousUrls.Select(Encoding.UTF8.GetBytes).ToArray();
 // Choose the fingerprint width that fits your needs (8, 16, or 32 bits)
 var filter = XorFilter32.BuildFrom(encodedValues);
 
-bool mightBeMalicious = filter.IsMember(Encoding.UTF8.GetBytes("getrichquickfrfr.org")); // true
-bool shouldBeClean   = filter.IsMember(Encoding.UTF8.GetBytes("example.com"));            // likely false
-```
-
-To make construction deterministic (reproducible builds), pass a seed:
-
-```csharp
-var deterministic = XorFilter16.BuildFrom(encodedValues, seed: 12345);
+bool malicious = filter.IsMember(Encoding.UTF8.GetBytes("phishing.example")); // returns true
+bool shouldBeClean = filter.IsMember(Encoding.UTF8.GetBytes("example.com")); // likely returns false
 ```
 
 ## Choosing a fingerprint width
