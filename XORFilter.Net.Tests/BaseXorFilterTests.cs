@@ -24,17 +24,17 @@ namespace XORFilter.Net.Tests
             public new void InitializeHashFunctionsWithSeeds(int tableSize, uint seed0, uint seed1, uint seed2)
                 => base.InitializeHashFunctionsWithSeeds(tableSize, seed0, seed1, seed2);
 
-            public new void GenerateHashes(Span<byte[]> values)
+            public new int[,] GenerateHashes(Span<byte[]> values)
                 => base.GenerateHashes(values);
 
-            public new bool TryPeel(Span<byte[]> values, out Stack<(int indexToPeel, int loneSlotIndex)> peelingOrder)
-                => base.TryPeel(values, out peelingOrder);
+            public new bool TryPeel(Span<byte[]> values, int[,] hashesPerValue, out Stack<(int indexToPeel, int loneSlotIndex)> peelingOrder)
+                => base.TryPeel(values, hashesPerValue, out peelingOrder);
 
-            public new HashSet<int>[] GetHashMapping(int size)
-                => base.GetHashMapping(size);
+            public new HashSet<int>[] GetHashMapping(int size, int[,] hashesPerValue)
+                => base.GetHashMapping(size, hashesPerValue);
 
-            public new void FillTableSlots(Span<byte[]> values, Stack<(int indexToPeel, int loneSlotIndex)> peelingOrder)
-                => base.FillTableSlots(values, peelingOrder);
+            public new void FillTableSlots(Span<byte[]> values, int[,] hashesPerValue, Stack<(int indexToPeel, int loneSlotIndex)> peelingOrder)
+                => base.FillTableSlots(values, hashesPerValue, peelingOrder);
         }
 
         [Fact]

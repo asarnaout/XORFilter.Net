@@ -10,14 +10,11 @@ public abstract class BaseXorFilter<T> where T : INumber<T>, IBitwiseOperators<T
 {
     private T[] _tableSlots = default!;
 
-    private int[,] _hashesPerValue = default!;
-
     private Func<byte[], int>[] _hashingFunctions = default!;
 
-    // Internal accessors for testing
     internal T[] TableSlots => _tableSlots;
+
     internal Func<byte[], int>[] HashingFunctions => _hashingFunctions;
-    internal int[,] HashesPerValue => _hashesPerValue;
 
     protected internal BaseXorFilter(Span<byte[]> values, int? seed = null)
     {
@@ -36,6 +33,7 @@ public abstract class BaseXorFilter<T> where T : INumber<T>, IBitwiseOperators<T
         const int maxRetries = 1000; // Prevent infinite loops
         const int retriesBeforeResize = 100; // Try resizing after this many failures
         var retryCount = 0;
+        int[,] hashesPerValue = default!;
 
         while (true)
         {
@@ -48,9 +46,9 @@ public abstract class BaseXorFilter<T> where T : INumber<T>, IBitwiseOperators<T
             while (retriesAtCurrentSize < retriesBeforeResize && retryCount < maxRetries)
             {
                 InitializeHashFunctions(_tableSlots.Length, seed);
-                GenerateHashes(values);
+                hashesPerValue = GenerateHashes(values);
 
-                if (TryPeel(values, out peelingOrder))
+                if (TryPeel(values, hashesPerValue, out peelingOrder))
                 {
                     peelingSuccessful = true;
                     break;
@@ -77,7 +75,7 @@ public abstract class BaseXorFilter<T> where T : INumber<T>, IBitwiseOperators<T
             currentTableSize = (int)Math.Ceiling(currentTableSize * 1.15d);
         }
 
-        FillTableSlots(values, peelingOrder);
+        FillTableSlots(values, hashesPerValue, peelingOrder);
     }
 
     /// <summary>
@@ -143,22 +141,24 @@ public abstract class BaseXorFilter<T> where T : INumber<T>, IBitwiseOperators<T
 
     private static uint GenerateSeed(Random random) => (((uint)random.Next(1 << 30)) << 2) | ((uint)random.Next(1 << 2));
 
-    internal void GenerateHashes(Span<byte[]> values)
+    internal int[,] GenerateHashes(Span<byte[]> values)
     {
-        _hashesPerValue = new int[values.Length, 3];
+        var hashesPerValue = new int[values.Length, 3];
 
         for (var i = 0; i < values.Length; i++)
         {
             for (var j = 0; j < _hashingFunctions.Length; j++)
             {
-                _hashesPerValue[i, j] = _hashingFunctions[j](values[i]);
+                hashesPerValue[i, j] = _hashingFunctions[j](values[i]);
             }
         }
+
+        return hashesPerValue;
     }
 
-    internal bool TryPeel(Span<byte[]> values, out Stack<(int indexToPeel, int loneSlotIndex)> peelingOrder)
+    internal bool TryPeel(Span<byte[]> values, int[,] hashesPerValue, out Stack<(int indexToPeel, int loneSlotIndex)> peelingOrder)
     {
-        var mapping = GetHashMapping(values.Length); //An array of arrays tracking which values reference each slot in _tableSlots
+        var mapping = GetHashMapping(values.Length, hashesPerValue); //An array of arrays tracking which values reference each slot in _tableSlots
 
         var loneSlots = GetLoneSlots(mapping);
 
@@ -173,7 +173,7 @@ public abstract class BaseXorFilter<T> where T : INumber<T>, IBitwiseOperators<T
 
             for (var j = 0; j < _hashingFunctions.Length; j++)
             {
-                var hashPosition = _hashesPerValue[referencingSlot, j];
+                var hashPosition = hashesPerValue[referencingSlot, j];
 
                 mapping[hashPosition].Remove(referencingSlot);
 
@@ -187,7 +187,7 @@ public abstract class BaseXorFilter<T> where T : INumber<T>, IBitwiseOperators<T
         return peelingOrder.Count == values.Length;
     }
 
-    internal HashSet<int>[] GetHashMapping(int size)
+    internal HashSet<int>[] GetHashMapping(int size, int[,] hashesPerValue)
     {
         var mapping = new HashSet<int>[_tableSlots.Length];
 
@@ -195,7 +195,7 @@ public abstract class BaseXorFilter<T> where T : INumber<T>, IBitwiseOperators<T
         {
             for (var j = 0; j < _hashingFunctions.Length; j++)
             {
-                var hashPosition = _hashesPerValue[i, j];
+                var hashPosition = hashesPerValue[i, j];
                 mapping[hashPosition] ??= [];
                 mapping[hashPosition].Add(i);
             }
@@ -219,7 +219,7 @@ public abstract class BaseXorFilter<T> where T : INumber<T>, IBitwiseOperators<T
         return result;
     }
 
-    internal void FillTableSlots(Span<byte[]> values, Stack<(int indexToPeel, int loneSlotIndex)> peelingOrder)
+    internal void FillTableSlots(Span<byte[]> values, int[,] hashesPerValue, Stack<(int indexToPeel, int loneSlotIndex)> peelingOrder)
     {
         while (peelingOrder.TryPop(out var peeled))
         {
@@ -227,9 +227,9 @@ public abstract class BaseXorFilter<T> where T : INumber<T>, IBitwiseOperators<T
 
             var value = values[indexToPeel];
 
-            int h0 = _hashesPerValue[indexToPeel, 0],
-                h1 = _hashesPerValue[indexToPeel, 1],
-                h2 = _hashesPerValue[indexToPeel, 2];
+            int h0 = hashesPerValue[indexToPeel, 0],
+                h1 = hashesPerValue[indexToPeel, 1],
+                h2 = hashesPerValue[indexToPeel, 2];
 
             int altHashA, altHashB;
 
@@ -251,7 +251,5 @@ public abstract class BaseXorFilter<T> where T : INumber<T>, IBitwiseOperators<T
 
             _tableSlots[loneSlotIndex] = _tableSlots[altHashA] ^ _tableSlots[altHashB] ^ FingerPrint(value);
         }
-
-        _hashesPerValue = default!;
     }
 }
