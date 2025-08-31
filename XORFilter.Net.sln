@@ -1,11 +1,11 @@
-﻿
+
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.2.32516.85
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "XORFilter.Net", "XORFilter.Net.csproj", "{04EB2A6B-1073-401F-AB13-5836BD60C8CC}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "XORFilter.Net", "XORFilter.Net\XORFilter.Net.csproj", "{04EB2A6B-1073-401F-AB13-5836BD60C8CC}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "XORFilter.Net.Tests", "..\XORFilter.Net.Tests\XORFilter.Net.Tests.csproj", "{CA53E1B9-673E-4DA2-BD3B-10DEC0F1719D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "XORFilter.Net.Tests", "XORFilter.Net.Tests\XORFilter.Net.Tests.csproj", "{CA53E1B9-673E-4DA2-BD3B-10DEC0F1719D}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "XORFilter.Net.Benchmarks", "XORFilter.Net.Benchmarks\XORFilter.Net.Benchmarks.csproj", "{04CD94E8-CCB5-4350-8FCC-7CB5A27CCC2B}"
 EndProject

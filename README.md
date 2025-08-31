@@ -1,5 +1,5 @@
 <p align="center">
-    <img src="XORFilter.Net/media/logo.svg" width="720" alt="XORFilter.Net logo" />
+    <img src="media/logo.svg" width="720" alt="XORFilter.Net logo" />
 </p>
 
 # XORFilter.Net
