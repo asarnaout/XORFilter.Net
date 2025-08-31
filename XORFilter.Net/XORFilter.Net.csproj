@@ -4,12 +4,14 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <PackageId>XORFilterDotNet</PackageId>
-    <Version>1.0.5</Version>
+    <Version>1.0.7</Version>
     <Authors>asarnaout</Authors>
     <RepositoryUrl>https://github.com/asarnaout/XORFilter.Net</RepositoryUrl>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageReleaseNotes>First stable Release.</PackageReleaseNotes>
+    <PackageTags>xor-filter;bloom-filter;probabilistic;data-structure;filter;hash;performance;memory-efficient;fast;csharp;dotnet</PackageTags>
+    <Description>A high-performance XOR filter implementation for .NET providing fast membership testing with low false positive rates and memory efficiency.</Description>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="HashDepot" Version="2.0.3" />
