@@ -28,13 +28,13 @@ XORFilter.Net is a .NET implementation of XOR filters, a family of probabilistic
 Package Manager:
 
 ```
-PM> NuGet\Install-Package XORFilterDotNet -Version 1.0.7
+PM> NuGet\Install-Package XORFilterDotNet -Version 1.0.8
 ```
 
 .NET CLI:
 
 ```
-dotnet add package XORFilterDotNet --version 1.0.7
+dotnet add package XORFilterDotNet --version 1.0.8
 ```
 
 ## Quickstart
