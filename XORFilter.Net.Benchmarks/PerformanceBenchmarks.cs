@@ -14,13 +14,9 @@ public class PerformanceBenchmarks
     private XorFilter8? _xorFilter8;
     private XorFilter16? _xorFilter16;
     private XorFilter32? _xorFilter32;
-    private SimpleBloomFilter? _bloomFilter;
 
     [Params(10000, 100000)]
     public int DataSetSize { get; set; }
-
-    [Params(0.01, 0.001)]
-    public double BloomFalsePositiveRate { get; set; }
 
     [GlobalSetup]
     public void Setup()
@@ -58,13 +54,6 @@ public class PerformanceBenchmarks
         _xorFilter8 = XorFilter8.BuildFrom(_testDataSet.ToArray(), 42);
         _xorFilter16 = XorFilter16.BuildFrom(_testDataSet.ToArray(), 42);
         _xorFilter32 = XorFilter32.BuildFrom(_testDataSet.ToArray(), 42);
-
-    _bloomFilter = new SimpleBloomFilter(DataSetSize, BloomFalsePositiveRate);
-
-        foreach (var item in _testDataSet)
-        {
-            _bloomFilter.Add(item);
-        }
     }
 
     [Benchmark]
@@ -83,17 +72,6 @@ public class PerformanceBenchmarks
     public object XorFilter32_Construction()
     {
         return XorFilter32.BuildFrom(_testDataSet.ToArray(), 42);
-    }
-
-    [Benchmark]
-    public object BloomFilter_Construction()
-    {
-        var filter = new SimpleBloomFilter(DataSetSize, BloomFalsePositiveRate);
-        foreach (var item in _testDataSet)
-        {
-            filter.Add(item);
-        }
-        return filter;
     }
 
     [Benchmark]
@@ -127,18 +105,6 @@ public class PerformanceBenchmarks
         foreach (var item in _lookupTestSet)
         {
             if (_xorFilter32!.IsMember(item))
-                hits++;
-        }
-        return hits;
-    }
-
-    [Benchmark]
-    public int BloomFilter_LookupOperations()
-    {
-        var hits = 0;
-        foreach (var item in _lookupTestSet)
-        {
-            if (_bloomFilter!.Contains(item))
                 hits++;
         }
         return hits;

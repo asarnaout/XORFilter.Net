@@ -19,7 +19,7 @@ class Program
     {
         Console.WriteLine("==========================================================");
         Console.WriteLine("XORFilter.Net Comprehensive Benchmarks");
-        Console.WriteLine("Comparing XOR Filters vs Bloom Filters");
+        Console.WriteLine("Performance & Memory: XOR Filters | False Positives: XOR vs Bloom");
         Console.WriteLine("==========================================================");
         Console.WriteLine();
 
@@ -103,7 +103,6 @@ class Program
         sb.AppendLine("| XorFilter8   | ~0.390625%        | ~9.84 bits       |");
         sb.AppendLine("| XorFilter16  | ~0.0015%          | ~19.69 bits      |");
         sb.AppendLine("| XorFilter32  | ~2.33e-8%         | ~39.38 bits      |");
-        sb.AppendLine("| BloomFilter  | Configurable      | Variable         |");
         sb.AppendLine();
         
         sb.AppendLine("## Key Advantages of XOR Filters:");
@@ -114,15 +113,16 @@ class Program
         sb.AppendLine("✓ **Deterministic**: Same input always produces same filter");
         sb.AppendLine();
         
-        sb.AppendLine("## Bloom Filter Advantages:");
-        sb.AppendLine("✓ **Dynamic Insertion**: Can add elements after construction");
-        sb.AppendLine("✓ **Tunable False Positive Rate**: Can be configured at construction");
-        sb.AppendLine("✓ **Mature Ecosystem**: Well-established with many implementations");
+        sb.AppendLine("## XOR Filter Comparison:");
+        sb.AppendLine("- **XorFilter8**: Lowest memory usage, moderate false positive rate (~0.39%)");
+        sb.AppendLine("- **XorFilter16**: Balanced memory and accuracy (~0.0015% false positive rate)");
+        sb.AppendLine("- **XorFilter32**: Highest memory usage, extremely low false positive rate (~2.33e-8%)");
         sb.AppendLine();
         
         sb.AppendLine("## Use Case Recommendations:");
-        sb.AppendLine("- **Use XOR Filters** when you have a static dataset and need fast, cache-friendly lookups");
-        sb.AppendLine("- **Use Bloom Filters** when you need to add elements dynamically or require very specific FP rates");
+        sb.AppendLine("- **Use XorFilter8** when memory is constrained and moderate false positive rates are acceptable");
+        sb.AppendLine("- **Use XorFilter16** for most general-purpose applications requiring good accuracy");
+        sb.AppendLine("- **Use XorFilter32** when extremely high accuracy is required and memory is not a constraint");
         
         Console.WriteLine(sb.ToString());
     }
