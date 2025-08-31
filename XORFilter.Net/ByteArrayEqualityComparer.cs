@@ -1,4 +1,4 @@
-using System.Security.Cryptography;
+using HashDepot;
 
 namespace XORFilter.Net;
 
@@ -31,10 +31,8 @@ public class ByteArrayEqualityComparer : IEqualityComparer<byte[]>
     {
         ArgumentNullException.ThrowIfNull(obj);
 
-        using var sha256 = SHA256.Create();
+        var hash = XXHash.Hash64(obj);
         
-        var hash = sha256.ComputeHash(obj);
-        
-        return BitConverter.ToInt32(hash, 0);
+        return (int)(hash ^ (hash >> 32));
     }
 }
