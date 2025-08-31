@@ -135,9 +135,9 @@ public abstract class BaseXorFilter<T> where T : INumber<T>, IBitwiseOperators<T
                 x => GetPartitionedHash(MurmurHash3.Hash32(x, seed1), partition1End, partition2End),
                 x => GetPartitionedHash(MurmurHash3.Hash32(x, seed2), partition2End, tableSize),
             ];
-
-        int GetPartitionedHash(uint hash, int start, int end) => start + (int)(hash % (end - start));
     }
+
+    static int GetPartitionedHash(uint hash, int start, int end) => start + (int)(hash % (end - start));
 
     private static uint GenerateSeed(Random random) => (((uint)random.Next(1 << 30)) << 2) | ((uint)random.Next(1 << 2));
 
