@@ -7,6 +7,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "XORFilter.Net", "XORFilter.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "XORFilter.Net.Tests", "..\XORFilter.Net.Tests\XORFilter.Net.Tests.csproj", "{CA53E1B9-673E-4DA2-BD3B-10DEC0F1719D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "XORFilter.Net.Benchmarks", "XORFilter.Net.Benchmarks\XORFilter.Net.Benchmarks.csproj", "{04CD94E8-CCB5-4350-8FCC-7CB5A27CCC2B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{CA53E1B9-673E-4DA2-BD3B-10DEC0F1719D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CA53E1B9-673E-4DA2-BD3B-10DEC0F1719D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CA53E1B9-673E-4DA2-BD3B-10DEC0F1719D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{04CD94E8-CCB5-4350-8FCC-7CB5A27CCC2B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{04CD94E8-CCB5-4350-8FCC-7CB5A27CCC2B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{04CD94E8-CCB5-4350-8FCC-7CB5A27CCC2B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{04CD94E8-CCB5-4350-8FCC-7CB5A27CCC2B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
