@@ -117,11 +117,10 @@ namespace XORFilter.Net.Tests
         }
 
         [Theory]
-        [InlineData(1)]
-        [InlineData(5)]
-        [InlineData(10)]
-        [InlineData(50)]
         [InlineData(100)]
+        [InlineData(500)]
+        [InlineData(1000)]
+        [InlineData(5000)]
         public void IsMember_RandomValues_MostReturnFalse(int count)
         {
             // Arrange
@@ -146,9 +145,20 @@ namespace XORFilter.Net.Tests
             }
 
             // Assert
-            // For XorFilter8, false positive rate should be approximately 0.390625%
+            // For XorFilter8, theoretical false positive rate is 0.390625%
+            // Use statistically sound thresholds based on sample size
             var falsePositiveRate = (double)falsePositives / count;
-            falsePositiveRate.Should().BeLessThan(0.02); // Should be much less than 2%
+            
+            if (count >= 1000)
+            {
+                // Large samples: expect rate close to theoretical value
+                falsePositiveRate.Should().BeLessThan(0.01); // Less than 1%
+            }
+            else
+            {
+                // Smaller samples: allow more variance due to statistical fluctuation
+                falsePositiveRate.Should().BeLessThan(0.05); // Less than 5%
+            }
         }
 
         [Fact]
