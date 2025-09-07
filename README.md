@@ -6,6 +6,8 @@
 
 [![NuGet](https://img.shields.io/nuget/v/XORFilterDotNet.svg)](https://www.nuget.org/packages/XORFilterDotNet)
 [![NuGet Downloads](https://img.shields.io/nuget/dt/XORFilterDotNet.svg)](https://www.nuget.org/packages/XORFilterDotNet)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![.NET](https://img.shields.io/badge/.NET-8.0-blue.svg)](https://dotnet.microsoft.com/download/dotnet/8.0)
 
 Fast, compact, and production-ready XOR filters for .NET. Perform O(1) approximate membership tests with tiny memory footprints and extremely low false-positive rates.
 
