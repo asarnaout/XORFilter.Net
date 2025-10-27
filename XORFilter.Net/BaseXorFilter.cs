@@ -10,13 +10,11 @@ public abstract class BaseXorFilter<T> where T : INumber<T>, IBitwiseOperators<T
 {
     private T[] _tableSlots = default!;
 
-    private Func<byte[], int>[] _hashingFunctions = default!;
-
-    private Func<ReadOnlySpan<byte>, int>[] _spanHashingFunctions = default!;
+    private Func<ReadOnlySpan<byte>, int>[] _hashingFunctions = default!;
 
     internal T[] TableSlots => _tableSlots;
 
-    internal Func<byte[], int>[] HashingFunctions => _hashingFunctions;
+    internal Func<ReadOnlySpan<byte>, int>[] HashingFunctions => _hashingFunctions;
 
     protected internal BaseXorFilter(Span<byte[]> values, int? seed = null)
     {
@@ -86,17 +84,7 @@ public abstract class BaseXorFilter<T> where T : INumber<T>, IBitwiseOperators<T
     /// </summary>
     /// <param name="value">The array of bytes that will be checked for membership</param>
     /// <returns>True if the value was previously added or if there is a collision.</returns>
-    public bool IsMember(byte[] value)
-    {
-        var xorResult = T.Zero;
-
-        for (var i = 0; i < _hashingFunctions.Length; i++)
-        {
-            xorResult ^= _tableSlots[_hashingFunctions[i](value)];
-        }
-
-        return FingerPrint(value) == xorResult;
-    }
+    public bool IsMember(byte[] value) => IsMember(value.AsSpan());
 
     /// <summary>
     /// Checks whether the byte span value has been previously hashed into the xor filter. Note that there is a possible degree of error that could happen
@@ -108,9 +96,9 @@ public abstract class BaseXorFilter<T> where T : INumber<T>, IBitwiseOperators<T
     {
         var xorResult = T.Zero;
 
-        for (var i = 0; i < _spanHashingFunctions.Length; i++)
+        for (var i = 0; i < _hashingFunctions.Length; i++)
         {
-            xorResult ^= _tableSlots[_spanHashingFunctions[i](value)];
+            xorResult ^= _tableSlots[_hashingFunctions[i](value)];
         }
 
         return FingerPrint(value) == xorResult;
@@ -157,13 +145,6 @@ public abstract class BaseXorFilter<T> where T : INumber<T>, IBitwiseOperators<T
                 x => GetPartitionedHash(MurmurHash3.Hash32(x, seed1), partition1End, partition2End),
                 x => GetPartitionedHash(MurmurHash3.Hash32(x, seed2), partition2End, tableSize),
             ];
-
-        _spanHashingFunctions = [
-
-            x => GetPartitionedHash(MurmurHash3.Hash32(x, seed0), 0, partition1End),
-                x => GetPartitionedHash(MurmurHash3.Hash32(x, seed1), partition1End, partition2End),
-                x => GetPartitionedHash(MurmurHash3.Hash32(x, seed2), partition2End, tableSize),
-            ];
     }
 
     static int GetPartitionedHash(uint hash, int start, int end) => start + (int)(hash % (end - start));
@@ -178,7 +159,7 @@ public abstract class BaseXorFilter<T> where T : INumber<T>, IBitwiseOperators<T
         {
             for (var j = 0; j < _hashingFunctions.Length; j++)
             {
-                hashesPerValue[i, j] = _hashingFunctions[j](values[i]);
+                hashesPerValue[i, j] = _hashingFunctions[j](values[i].AsSpan());
             }
         }
 

@@ -15,10 +15,7 @@ namespace XORFilter.Net.Tests
         {
             public TestableXorFilter(Span<byte[]> values) : base(values) { }
 
-            protected override uint FingerPrint(byte[] data)
-        {
-            return XORFilter.Net.Hashing.Crc32.Hash(data);
-        }
+            protected override uint FingerPrint(byte[] data) => FingerPrint(data.AsSpan());
 
             protected override uint FingerPrint(ReadOnlySpan<byte> data)
             {
@@ -125,9 +122,9 @@ namespace XORFilter.Net.Tests
             
             // Test that hash functions produce values in valid ranges
             var testInput = Encoding.UTF8.GetBytes("test");
-            var hash0 = filter.HashingFunctions[0](testInput);
-            var hash1 = filter.HashingFunctions[1](testInput);
-            var hash2 = filter.HashingFunctions[2](testInput);
+            var hash0 = filter.HashingFunctions[0](testInput.AsSpan());
+            var hash1 = filter.HashingFunctions[1](testInput.AsSpan());
+            var hash2 = filter.HashingFunctions[2](testInput.AsSpan());
 
             hash0.Should().BeInRange(0, 0); // First partition: [0, 1)
             hash1.Should().BeInRange(1, 1); // Second partition: [1, 2)
@@ -145,10 +142,10 @@ namespace XORFilter.Net.Tests
             var testInput = Encoding.UTF8.GetBytes("consistent");
 
             // Act
-            var hash1_1 = filter.HashingFunctions[0](testInput);
-            var hash1_2 = filter.HashingFunctions[0](testInput);
-            var hash2_1 = filter.HashingFunctions[1](testInput);
-            var hash2_2 = filter.HashingFunctions[1](testInput);
+            var hash1_1 = filter.HashingFunctions[0](testInput.AsSpan());
+            var hash1_2 = filter.HashingFunctions[0](testInput.AsSpan());
+            var hash2_1 = filter.HashingFunctions[1](testInput.AsSpan());
+            var hash2_2 = filter.HashingFunctions[1](testInput.AsSpan());
 
             // Assert
             hash1_1.Should().Be(hash1_2);
@@ -258,9 +255,9 @@ namespace XORFilter.Net.Tests
             var testInput = Encoding.UTF8.GetBytes("partition_test");
             var hashes = new[]
             {
-                filter.HashingFunctions[0](testInput),
-                filter.HashingFunctions[1](testInput),
-                filter.HashingFunctions[2](testInput)
+                filter.HashingFunctions[0](testInput.AsSpan()),
+                filter.HashingFunctions[1](testInput.AsSpan()),
+                filter.HashingFunctions[2](testInput.AsSpan())
             };
 
             // All hashes should be within table bounds
@@ -361,8 +358,8 @@ namespace XORFilter.Net.Tests
             var testInput = Encoding.UTF8.GetBytes("consistency_test");
 
             // Act
-            var hash1_func1 = filter1.HashingFunctions[0](testInput);
-            var hash2_func1 = filter2.HashingFunctions[0](testInput);
+            var hash1_func1 = filter1.HashingFunctions[0](testInput.AsSpan());
+            var hash2_func1 = filter2.HashingFunctions[0](testInput.AsSpan());
 
             // Assert - Different instances should potentially have different hash functions due to random seeds
             // (though they might occasionally be the same due to randomness)
@@ -409,8 +406,8 @@ namespace XORFilter.Net.Tests
             {
                 for (int funcIndex = 0; funcIndex < 3; funcIndex++)
                 {
-                    var hash = filter.HashingFunctions[funcIndex](input);
-                    hash.Should().BeInRange(0, tableSize - 1, 
+                    var hash = filter.HashingFunctions[funcIndex](input.AsSpan());
+                    hash.Should().BeInRange(0, tableSize - 1,
                         $"Hash function {funcIndex} produced out-of-bounds result for table size {tableSize}");
                 }
             }
