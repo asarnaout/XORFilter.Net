@@ -25,5 +25,10 @@ namespace XORFilter.Net
         {
             return (ushort)(Crc32.Hash(data) % (ushort.MaxValue + 1));
         }
+
+        protected override ushort FingerPrint(ReadOnlySpan<byte> data)
+        {
+            return (ushort)(Crc32.Hash(data) % (ushort.MaxValue + 1));
+        }
     }
 }

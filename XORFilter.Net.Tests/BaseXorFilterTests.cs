@@ -20,6 +20,11 @@ namespace XORFilter.Net.Tests
             return XORFilter.Net.Hashing.Crc32.Hash(data);
         }
 
+            protected override uint FingerPrint(ReadOnlySpan<byte> data)
+            {
+                return XORFilter.Net.Hashing.Crc32.Hash(data);
+            }
+
             // Expose internal methods for testing
             public new void InitializeHashFunctionsWithSeeds(int tableSize, uint seed0, uint seed1, uint seed2)
                 => base.InitializeHashFunctionsWithSeeds(tableSize, seed0, seed1, seed2);
@@ -529,11 +534,112 @@ namespace XORFilter.Net.Tests
             // Assert
             filter.Should().NotBeNull();
             filter.TableSlots.Length.Should().BeGreaterThanOrEqualTo(3); // Minimum table size
-            
+
             foreach (var value in values)
             {
                 filter.IsMember(value).Should().BeTrue();
             }
+        }
+
+        [Fact]
+        public void IsMember_SpanOverload_AddedValue_ReturnsTrue()
+        {
+            // Arrange
+            var testValue = Encoding.UTF8.GetBytes("test_value");
+            var values = new byte[][] { testValue };
+            var filter = new TestableXorFilter(values);
+
+            // Act
+            var isMember = filter.IsMember(testValue.AsSpan());
+
+            // Assert
+            isMember.Should().BeTrue();
+        }
+
+        [Fact]
+        public void IsMember_SpanOverload_NotAddedValue_ReturnsFalse()
+        {
+            // Arrange
+            var addedValue = Encoding.UTF8.GetBytes("added_value");
+            var notAddedValue = Encoding.UTF8.GetBytes("not_added_value");
+            var values = new byte[][] { addedValue };
+            var filter = new TestableXorFilter(values);
+
+            // Act
+            var isMember = filter.IsMember(notAddedValue.AsSpan());
+
+            // Assert
+            isMember.Should().BeFalse();
+        }
+
+        [Fact]
+        public void IsMember_SpanOverload_MatchesByteArrayOverload()
+        {
+            // Arrange
+            var testValues = new[]
+            {
+                Encoding.UTF8.GetBytes("test1"),
+                Encoding.UTF8.GetBytes("test2"),
+                Encoding.UTF8.GetBytes("test3")
+            };
+            var filter = new TestableXorFilter(testValues);
+
+            // Act & Assert - Both overloads should return the same results
+            foreach (var value in testValues)
+            {
+                var byteArrayResult = filter.IsMember(value);
+                var spanResult = filter.IsMember(value.AsSpan());
+                spanResult.Should().Be(byteArrayResult);
+                spanResult.Should().BeTrue();
+            }
+
+            // Test with values not in the filter
+            var notAddedValues = new[]
+            {
+                Encoding.UTF8.GetBytes("not_added1"),
+                Encoding.UTF8.GetBytes("not_added2")
+            };
+            foreach (var value in notAddedValues)
+            {
+                var byteArrayResult = filter.IsMember(value);
+                var spanResult = filter.IsMember(value.AsSpan());
+                spanResult.Should().Be(byteArrayResult);
+            }
+        }
+
+        [Fact]
+        public void IsMember_SpanOverload_EmptySpan_Works()
+        {
+            // Arrange
+            var values = new byte[][] { Array.Empty<byte>() };
+            var filter = new TestableXorFilter(values);
+
+            // Act
+            var isMember = filter.IsMember(ReadOnlySpan<byte>.Empty);
+
+            // Assert
+            isMember.Should().BeTrue();
+        }
+
+        [Fact]
+        public void IsMember_SpanOverload_LargeDataset_PerformanceTest()
+        {
+            // Arrange
+            var values = Enumerable.Range(0, 1000)
+                .Select(i => Encoding.UTF8.GetBytes($"value_{i}"))
+                .ToArray();
+            var filter = new TestableXorFilter(values);
+
+            // Act - Test with both overloads
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+            for (int i = 0; i < 1000; i++)
+            {
+                filter.IsMember(values[i].AsSpan());
+            }
+            stopwatch.Stop();
+
+            // Assert
+            stopwatch.ElapsedMilliseconds.Should().BeLessThan(1000); // Should be fast
         }
     }
 }

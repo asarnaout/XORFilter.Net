@@ -12,6 +12,8 @@ public abstract class BaseXorFilter<T> where T : INumber<T>, IBitwiseOperators<T
 
     private Func<byte[], int>[] _hashingFunctions = default!;
 
+    private Func<ReadOnlySpan<byte>, int>[] _spanHashingFunctions = default!;
+
     internal T[] TableSlots => _tableSlots;
 
     internal Func<byte[], int>[] HashingFunctions => _hashingFunctions;
@@ -96,7 +98,27 @@ public abstract class BaseXorFilter<T> where T : INumber<T>, IBitwiseOperators<T
         return FingerPrint(value) == xorResult;
     }
 
+    /// <summary>
+    /// Checks whether the byte span value has been previously hashed into the xor filter. Note that there is a possible degree of error that could happen
+    /// based on which filter was chosen (8 vs 16 vs 32).
+    /// </summary>
+    /// <param name="value">The span of bytes that will be checked for membership</param>
+    /// <returns>True if the value was previously added or if there is a collision.</returns>
+    public bool IsMember(ReadOnlySpan<byte> value)
+    {
+        var xorResult = T.Zero;
+
+        for (var i = 0; i < _spanHashingFunctions.Length; i++)
+        {
+            xorResult ^= _tableSlots[_spanHashingFunctions[i](value)];
+        }
+
+        return FingerPrint(value) == xorResult;
+    }
+
     protected abstract T FingerPrint(byte[] data);
+
+    protected abstract T FingerPrint(ReadOnlySpan<byte> data);
 
     private static Span<byte[]> ToUniqueByteArray(Span<byte[]> values)
     {
@@ -130,6 +152,13 @@ public abstract class BaseXorFilter<T> where T : INumber<T>, IBitwiseOperators<T
         var partition2End = partition1End + partitionSize + (remainder > 1 ? 1 : 0); //If remainder is 1, then there is no need to add to this partition, we only need to add another 1 here if the remainder is 2.
 
         _hashingFunctions = [
+
+            x => GetPartitionedHash(MurmurHash3.Hash32(x, seed0), 0, partition1End),
+                x => GetPartitionedHash(MurmurHash3.Hash32(x, seed1), partition1End, partition2End),
+                x => GetPartitionedHash(MurmurHash3.Hash32(x, seed2), partition2End, tableSize),
+            ];
+
+        _spanHashingFunctions = [
 
             x => GetPartitionedHash(MurmurHash3.Hash32(x, seed0), 0, partition1End),
                 x => GetPartitionedHash(MurmurHash3.Hash32(x, seed1), partition1End, partition2End),
