@@ -62,8 +62,14 @@ var encodedValues = maliciousUrls.Select(Encoding.UTF8.GetBytes).ToArray();
 // Choose the fingerprint width that fits your needs (8, 16, or 32 bits)
 var filter = XorFilter32.BuildFrom(encodedValues);
 
-bool malicious = filter.IsMember(Encoding.UTF8.GetBytes("phishing.example")); // returns true
-bool shouldBeClean = filter.IsMember(Encoding.UTF8.GetBytes("example.com")); // likely returns false
+// Zero-allocation queries using ReadOnlySpan<byte>
+bool malicious = filter.IsMember(Encoding.UTF8.GetBytes("phishing.example").AsSpan()); // returns true
+bool shouldBeClean = filter.IsMember(Encoding.UTF8.GetBytes("example.com").AsSpan()); // likely returns false
+
+// Or reuse buffers for maximum efficiency in hot paths
+var buffer = new byte[256];
+int written = Encoding.UTF8.GetBytes("phishing.example", buffer);
+bool result = filter.IsMember(buffer.AsSpan(0, written)); // zero allocations
 ```
 
 ## Choosing a fingerprint width
@@ -81,13 +87,16 @@ Tip: Start with 16-bit for a good balance. Use 8-bit for tiny memory or 32-bit f
 ## API at a glance
 
 - Build: `XorFilter8.BuildFrom(Span<byte[]> values, int? seed = null)` (also 16 and 32 variants)
-- Query: `bool IsMember(byte[] value)`
+- Query:
+  - **Recommended**: `bool IsMember(ReadOnlySpan<byte> value)` — zero allocations
+  - Legacy: `bool IsMember(byte[] value)` — maintained for backward compatibility
 
 Notes:
 
 - Input is deduplicated internally; duplicates don't increase size.
 - Lookups are thread-safe after the filter is built.
 - Construction may retry with different hashes; the library handles this automatically and may slightly grow the table on failure.
+- Use the `ReadOnlySpan<byte>` overload for maximum performance in hot paths.
 
 ## How it works (brief)
 
@@ -102,8 +111,9 @@ Values are mapped to three disjoint partitions using MurmurHash3 and a CRC32-bas
 ## Constraints and best practices
 
 - Static sets: filters are immutable; add/remove requires rebuilding.
-- Operates on `byte[]`. Convert from strings with `Encoding.UTF8.GetBytes` or from structs via serialization.
-- Minimize allocations in hot paths by reusing `byte[]` buffers when possible.
+- Operates on byte sequences. Convert from strings with `Encoding.UTF8.GetBytes` or from structs via serialization.
+- **Zero allocations**: Use `IsMember(ReadOnlySpan<byte>)` for hot paths to eliminate heap allocations entirely.
+- Reuse buffers when encoding repeatedly: `Encoding.UTF8.GetBytes(string, Span<byte>)` writes directly to a buffer.
 - For reproducibility across runs, provide a fixed `seed`.
 
 ## References
