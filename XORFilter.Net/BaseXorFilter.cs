@@ -84,6 +84,7 @@ public abstract class BaseXorFilter<T> where T : INumber<T>, IBitwiseOperators<T
     /// </summary>
     /// <param name="value">The array of bytes that will be checked for membership</param>
     /// <returns>True if the value was previously added or if there is a collision.</returns>
+    [Obsolete("Use IsMember(ReadOnlySpan<byte>) instead to avoid allocations. This method is maintained for backward compatibility.")]
     public bool IsMember(byte[] value) => IsMember(value.AsSpan());
 
     /// <summary>
