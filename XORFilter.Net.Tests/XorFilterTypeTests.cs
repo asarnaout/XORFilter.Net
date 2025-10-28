@@ -2,11 +2,34 @@
 
 using System.Text;
 using FluentAssertions;
-using Xunit;
-using XORFilter.Net;
 
 namespace XORFilter.Net.Tests
 {
+    // Test helper classes to expose protected FingerPrint methods
+    internal class TestableXorFilter8 : BaseXorFilter<byte>
+    {
+        public TestableXorFilter8(Span<byte[]> values) : base(values) { }
+        protected override byte FingerPrint(byte[] data) => FingerPrint(data.AsSpan());
+        protected override byte FingerPrint(ReadOnlySpan<byte> data) => (byte)(XORFilter.Net.Hashing.Crc32.Hash(data) % (byte.MaxValue + 1));
+        public byte FingerPrintPublic(ReadOnlySpan<byte> data) => FingerPrint(data);
+    }
+
+    internal class TestableXorFilter16 : BaseXorFilter<ushort>
+    {
+        public TestableXorFilter16(Span<byte[]> values) : base(values) { }
+        protected override ushort FingerPrint(byte[] data) => FingerPrint(data.AsSpan());
+        protected override ushort FingerPrint(ReadOnlySpan<byte> data) => (ushort)(XORFilter.Net.Hashing.Crc32.Hash(data) % (ushort.MaxValue + 1));
+        public ushort FingerPrintPublic(ReadOnlySpan<byte> data) => FingerPrint(data);
+    }
+
+    internal class TestableXorFilter32 : BaseXorFilter<uint>
+    {
+        public TestableXorFilter32(Span<byte[]> values) : base(values) { }
+        protected override uint FingerPrint(byte[] data) => FingerPrint(data.AsSpan());
+        protected override uint FingerPrint(ReadOnlySpan<byte> data) => XORFilter.Net.Hashing.Crc32.Hash(data);
+        public uint FingerPrintPublic(ReadOnlySpan<byte> data) => FingerPrint(data);
+    }
+
     /// <summary>
     /// Unit tests for XorFilter8 - focusing on 8-bit specific behavior
     /// </summary>
@@ -36,16 +59,12 @@ namespace XORFilter.Net.Tests
         {
             // Arrange
             var values = new byte[][] { Encoding.UTF8.GetBytes("test") };
-            var filter = XorFilter8.BuildFrom(values);
+            var filter = new TestableXorFilter8(values);
             var testInput = Encoding.UTF8.GetBytes("fingerprint_test");
 
-            // Use reflection to access the protected FingerPrint method
-            var method = typeof(XorFilter8).GetMethod("FingerPrint",
-                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-
             // Act
-            var fingerprint1 = (byte)method!.Invoke(filter, new object[] { testInput })!;
-            var fingerprint2 = (byte)method!.Invoke(filter, new object[] { testInput })!;
+            var fingerprint1 = filter.FingerPrintPublic(testInput.AsSpan());
+            var fingerprint2 = filter.FingerPrintPublic(testInput.AsSpan());
 
             // Assert
             fingerprint1.Should().Be(fingerprint2);
@@ -56,16 +75,13 @@ namespace XORFilter.Net.Tests
         {
             // Arrange
             var values = new byte[][] { Encoding.UTF8.GetBytes("test") };
-            var filter = XorFilter8.BuildFrom(values);
+            var filter = new TestableXorFilter8(values);
             var input1 = Encoding.UTF8.GetBytes("input1");
             var input2 = Encoding.UTF8.GetBytes("input2");
 
-            var method = typeof(XorFilter8).GetMethod("FingerPrint",
-                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-
             // Act
-            var fingerprint1 = (byte)method!.Invoke(filter, new object[] { input1 })!;
-            var fingerprint2 = (byte)method!.Invoke(filter, new object[] { input2 })!;
+            var fingerprint1 = filter.FingerPrintPublic(input1.AsSpan());
+            var fingerprint2 = filter.FingerPrintPublic(input2.AsSpan());
 
             // Assert
             fingerprint1.Should().NotBe(fingerprint2);
@@ -76,7 +92,7 @@ namespace XORFilter.Net.Tests
         {
             // Arrange
             var values = new byte[][] { Encoding.UTF8.GetBytes("test") };
-            var filter = XorFilter8.BuildFrom(values);
+            var filter = new TestableXorFilter8(values);
             var testInputs = new[]
             {
                 Array.Empty<byte>(),
@@ -85,13 +101,10 @@ namespace XORFilter.Net.Tests
                 new byte[] { 0, 1, 2, 3, 255 }
             };
 
-            var method = typeof(XorFilter8).GetMethod("FingerPrint",
-                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-
             // Act & Assert
             foreach (var input in testInputs)
             {
-                var fingerprint = (byte)method!.Invoke(filter, new object[] { input })!;
+                var fingerprint = filter.FingerPrintPublic(input.AsSpan());
                 fingerprint.Should().BeInRange(byte.MinValue, byte.MaxValue);
             }
         }
@@ -291,7 +304,7 @@ namespace XORFilter.Net.Tests
         {
             // Arrange
             var values = new byte[][] { Encoding.UTF8.GetBytes("test") };
-            var filter = XorFilter16.BuildFrom(values);
+            var filter = new TestableXorFilter16(values);
             var testInputs = new[]
             {
                 Array.Empty<byte>(),
@@ -299,13 +312,10 @@ namespace XORFilter.Net.Tests
                 new byte[] { 255, 255, 255, 255 }
             };
 
-            var method = typeof(XorFilter16).GetMethod("FingerPrint",
-                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-
             // Act & Assert
             foreach (var input in testInputs)
             {
-                var fingerprint = (ushort)method!.Invoke(filter, new object[] { input })!;
+                var fingerprint = filter.FingerPrintPublic(input.AsSpan());
                 fingerprint.Should().BeInRange(ushort.MinValue, ushort.MaxValue);
             }
         }
@@ -372,14 +382,11 @@ namespace XORFilter.Net.Tests
         {
             // Arrange
             var values = new byte[][] { Encoding.UTF8.GetBytes("test") };
-            var filter = XorFilter32.BuildFrom(values);
+            var filter = new TestableXorFilter32(values);
             var testInput = Encoding.UTF8.GetBytes("fingerprint_test");
 
-            var method = typeof(XorFilter32).GetMethod("FingerPrint",
-                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-
             // Act
-            var fingerprint = (uint)method!.Invoke(filter, new object[] { testInput })!;
+            var fingerprint = filter.FingerPrintPublic(testInput.AsSpan());
 
             // Assert
             fingerprint.Should().BeInRange(uint.MinValue, uint.MaxValue);

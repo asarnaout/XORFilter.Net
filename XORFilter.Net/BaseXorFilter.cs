@@ -8,13 +8,15 @@ namespace XORFilter.Net;
 
 public abstract class BaseXorFilter<T> where T : INumber<T>, IBitwiseOperators<T, T, T>
 {
+    public delegate int HashFunction(ReadOnlySpan<byte> data);
+
     private T[] _tableSlots = default!;
 
-    private Func<ReadOnlySpan<byte>, int>[] _hashingFunctions = default!;
+    private HashFunction[] _hashingFunctions = default!;
 
     internal T[] TableSlots => _tableSlots;
 
-    internal Func<ReadOnlySpan<byte>, int>[] HashingFunctions => _hashingFunctions;
+    internal HashFunction[] HashingFunctions => _hashingFunctions;
 
     protected internal BaseXorFilter(Span<byte[]> values, int? seed = null)
     {

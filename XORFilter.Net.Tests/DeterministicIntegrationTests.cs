@@ -202,15 +202,15 @@ public class DeterministicIntegrationTests
     [InlineData(typeof(XorFilter8))]
     [InlineData(typeof(XorFilter16))]
     [InlineData(typeof(XorFilter32))]
-    public void IsMember_WithNullInput_ShouldThrowException(Type filterType)
+    public void IsMember_WithEmptyInput_ShouldNotThrow(Type filterType)
     {
         // Arrange
         var testData = GenerateTestData(10);
         var filter = CreateFilter(filterType, testData, DeterministicSeed);
-        
-        // Act & Assert - Should throw exception for null input
-        var action = () => IsFilterMember(filter, null!);
-        action.Should().Throw<Exception>("filter should throw exception for null input");
+
+        // Act & Assert - Empty spans are valid input for the span-based API
+        var action = () => IsFilterMember(filter, Array.Empty<byte>());
+        action.Should().NotThrow("empty spans are valid input");
     }
     
     [Theory]
@@ -320,10 +320,14 @@ public class DeterministicIntegrationTests
     
     private static bool IsFilterMember(object filter, byte[] item)
     {
-        var isMemberMethod = filter.GetType().GetMethod("IsMember");
-        if (isMemberMethod == null)
-            throw new InvalidOperationException($"IsMember method not found on {filter.GetType().Name}");
-            
-        return (bool)isMemberMethod.Invoke(filter, new object[] { item })!;
+        // Use the span-based API by casting to the base type
+        if (filter is BaseXorFilter<byte> filter8)
+            return filter8.IsMember(item.AsSpan());
+        if (filter is BaseXorFilter<ushort> filter16)
+            return filter16.IsMember(item.AsSpan());
+        if (filter is BaseXorFilter<uint> filter32)
+            return filter32.IsMember(item.AsSpan());
+
+        throw new InvalidOperationException($"Unknown filter type: {filter.GetType().Name}");
     }
 }
