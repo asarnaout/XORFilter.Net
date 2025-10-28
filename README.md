@@ -62,14 +62,14 @@ var encodedValues = maliciousUrls.Select(Encoding.UTF8.GetBytes).ToArray();
 // Choose the fingerprint width that fits your needs (8, 16, or 32 bits)
 var filter = XorFilter32.BuildFrom(encodedValues);
 
-// Zero-allocation queries using ReadOnlySpan<byte>
+// Query using the span-based API (still allocates byte[] internally)
 bool malicious = filter.IsMember(Encoding.UTF8.GetBytes("phishing.example").AsSpan()); // returns true
 bool shouldBeClean = filter.IsMember(Encoding.UTF8.GetBytes("example.com").AsSpan()); // likely returns false
 
-// Or reuse buffers for maximum efficiency in hot paths
+// For zero allocations in hot paths, reuse a buffer
 var buffer = new byte[256];
 int written = Encoding.UTF8.GetBytes("phishing.example", buffer);
-bool result = filter.IsMember(buffer.AsSpan(0, written)); // zero allocations
+bool result = filter.IsMember(buffer.AsSpan(0, written)); // truly zero allocations
 ```
 
 ## Choosing a fingerprint width
