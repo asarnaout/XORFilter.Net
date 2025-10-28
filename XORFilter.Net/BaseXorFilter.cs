@@ -10,11 +10,11 @@ public abstract class BaseXorFilter<T> where T : INumber<T>, IBitwiseOperators<T
 {
     private T[] _tableSlots = default!;
 
-    private Func<byte[], int>[] _hashingFunctions = default!;
+    private Func<ReadOnlySpan<byte>, int>[] _hashingFunctions = default!;
 
     internal T[] TableSlots => _tableSlots;
 
-    internal Func<byte[], int>[] HashingFunctions => _hashingFunctions;
+    internal Func<ReadOnlySpan<byte>, int>[] HashingFunctions => _hashingFunctions;
 
     protected internal BaseXorFilter(Span<byte[]> values, int? seed = null)
     {
@@ -84,7 +84,16 @@ public abstract class BaseXorFilter<T> where T : INumber<T>, IBitwiseOperators<T
     /// </summary>
     /// <param name="value">The array of bytes that will be checked for membership</param>
     /// <returns>True if the value was previously added or if there is a collision.</returns>
-    public bool IsMember(byte[] value)
+    [Obsolete("Use IsMember(ReadOnlySpan<byte>) instead to avoid allocations. This method is maintained for backward compatibility.")]
+    public bool IsMember(byte[] value) => IsMember(value.AsSpan());
+
+    /// <summary>
+    /// Checks whether the byte span value has been previously hashed into the xor filter. Note that there is a possible degree of error that could happen
+    /// based on which filter was chosen (8 vs 16 vs 32).
+    /// </summary>
+    /// <param name="value">The span of bytes that will be checked for membership</param>
+    /// <returns>True if the value was previously added or if there is a collision.</returns>
+    public bool IsMember(ReadOnlySpan<byte> value)
     {
         var xorResult = T.Zero;
 
@@ -97,6 +106,8 @@ public abstract class BaseXorFilter<T> where T : INumber<T>, IBitwiseOperators<T
     }
 
     protected abstract T FingerPrint(byte[] data);
+
+    protected abstract T FingerPrint(ReadOnlySpan<byte> data);
 
     private static Span<byte[]> ToUniqueByteArray(Span<byte[]> values)
     {
@@ -149,7 +160,7 @@ public abstract class BaseXorFilter<T> where T : INumber<T>, IBitwiseOperators<T
         {
             for (var j = 0; j < _hashingFunctions.Length; j++)
             {
-                hashesPerValue[i, j] = _hashingFunctions[j](values[i]);
+                hashesPerValue[i, j] = _hashingFunctions[j](values[i].AsSpan());
             }
         }
 

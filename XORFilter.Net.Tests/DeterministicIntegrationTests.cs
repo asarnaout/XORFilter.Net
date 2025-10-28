@@ -1,3 +1,5 @@
+#pragma warning disable CS0618 // Type or member is obsolete - we're testing backward compatibility
+
 using FluentAssertions;
 using System.Text;
 using Xunit;

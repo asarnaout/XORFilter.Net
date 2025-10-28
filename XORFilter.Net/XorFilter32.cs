@@ -21,6 +21,8 @@ namespace XORFilter.Net
             return new XorFilter32(values, seed);
         }
 
-        protected override uint FingerPrint(byte[] data) => Crc32.Hash(data);
+        protected override uint FingerPrint(byte[] data) => FingerPrint(data.AsSpan());
+
+        protected override uint FingerPrint(ReadOnlySpan<byte> data) => Crc32.Hash(data);
     }
 }

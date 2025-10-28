@@ -1,3 +1,5 @@
+#pragma warning disable CS0618 // Type or member is obsolete - we're testing backward compatibility
+
 using System.Text;
 using FluentAssertions;
 using Xunit;
@@ -15,10 +17,12 @@ namespace XORFilter.Net.Tests
         {
             public TestableXorFilter(Span<byte[]> values) : base(values) { }
 
-            protected override uint FingerPrint(byte[] data)
-        {
-            return XORFilter.Net.Hashing.Crc32.Hash(data);
-        }
+            protected override uint FingerPrint(byte[] data) => FingerPrint(data.AsSpan());
+
+            protected override uint FingerPrint(ReadOnlySpan<byte> data)
+            {
+                return XORFilter.Net.Hashing.Crc32.Hash(data);
+            }
 
             // Expose internal methods for testing
             public new void InitializeHashFunctionsWithSeeds(int tableSize, uint seed0, uint seed1, uint seed2)
@@ -120,9 +124,9 @@ namespace XORFilter.Net.Tests
             
             // Test that hash functions produce values in valid ranges
             var testInput = Encoding.UTF8.GetBytes("test");
-            var hash0 = filter.HashingFunctions[0](testInput);
-            var hash1 = filter.HashingFunctions[1](testInput);
-            var hash2 = filter.HashingFunctions[2](testInput);
+            var hash0 = filter.HashingFunctions[0](testInput.AsSpan());
+            var hash1 = filter.HashingFunctions[1](testInput.AsSpan());
+            var hash2 = filter.HashingFunctions[2](testInput.AsSpan());
 
             hash0.Should().BeInRange(0, 0); // First partition: [0, 1)
             hash1.Should().BeInRange(1, 1); // Second partition: [1, 2)
@@ -140,10 +144,10 @@ namespace XORFilter.Net.Tests
             var testInput = Encoding.UTF8.GetBytes("consistent");
 
             // Act
-            var hash1_1 = filter.HashingFunctions[0](testInput);
-            var hash1_2 = filter.HashingFunctions[0](testInput);
-            var hash2_1 = filter.HashingFunctions[1](testInput);
-            var hash2_2 = filter.HashingFunctions[1](testInput);
+            var hash1_1 = filter.HashingFunctions[0](testInput.AsSpan());
+            var hash1_2 = filter.HashingFunctions[0](testInput.AsSpan());
+            var hash2_1 = filter.HashingFunctions[1](testInput.AsSpan());
+            var hash2_2 = filter.HashingFunctions[1](testInput.AsSpan());
 
             // Assert
             hash1_1.Should().Be(hash1_2);
@@ -253,9 +257,9 @@ namespace XORFilter.Net.Tests
             var testInput = Encoding.UTF8.GetBytes("partition_test");
             var hashes = new[]
             {
-                filter.HashingFunctions[0](testInput),
-                filter.HashingFunctions[1](testInput),
-                filter.HashingFunctions[2](testInput)
+                filter.HashingFunctions[0](testInput.AsSpan()),
+                filter.HashingFunctions[1](testInput.AsSpan()),
+                filter.HashingFunctions[2](testInput.AsSpan())
             };
 
             // All hashes should be within table bounds
@@ -356,8 +360,8 @@ namespace XORFilter.Net.Tests
             var testInput = Encoding.UTF8.GetBytes("consistency_test");
 
             // Act
-            var hash1_func1 = filter1.HashingFunctions[0](testInput);
-            var hash2_func1 = filter2.HashingFunctions[0](testInput);
+            var hash1_func1 = filter1.HashingFunctions[0](testInput.AsSpan());
+            var hash2_func1 = filter2.HashingFunctions[0](testInput.AsSpan());
 
             // Assert - Different instances should potentially have different hash functions due to random seeds
             // (though they might occasionally be the same due to randomness)
@@ -404,8 +408,8 @@ namespace XORFilter.Net.Tests
             {
                 for (int funcIndex = 0; funcIndex < 3; funcIndex++)
                 {
-                    var hash = filter.HashingFunctions[funcIndex](input);
-                    hash.Should().BeInRange(0, tableSize - 1, 
+                    var hash = filter.HashingFunctions[funcIndex](input.AsSpan());
+                    hash.Should().BeInRange(0, tableSize - 1,
                         $"Hash function {funcIndex} produced out-of-bounds result for table size {tableSize}");
                 }
             }
@@ -529,11 +533,112 @@ namespace XORFilter.Net.Tests
             // Assert
             filter.Should().NotBeNull();
             filter.TableSlots.Length.Should().BeGreaterThanOrEqualTo(3); // Minimum table size
-            
+
             foreach (var value in values)
             {
                 filter.IsMember(value).Should().BeTrue();
             }
+        }
+
+        [Fact]
+        public void IsMember_SpanOverload_AddedValue_ReturnsTrue()
+        {
+            // Arrange
+            var testValue = Encoding.UTF8.GetBytes("test_value");
+            var values = new byte[][] { testValue };
+            var filter = new TestableXorFilter(values);
+
+            // Act
+            var isMember = filter.IsMember(testValue.AsSpan());
+
+            // Assert
+            isMember.Should().BeTrue();
+        }
+
+        [Fact]
+        public void IsMember_SpanOverload_NotAddedValue_ReturnsFalse()
+        {
+            // Arrange
+            var addedValue = Encoding.UTF8.GetBytes("added_value");
+            var notAddedValue = Encoding.UTF8.GetBytes("not_added_value");
+            var values = new byte[][] { addedValue };
+            var filter = new TestableXorFilter(values);
+
+            // Act
+            var isMember = filter.IsMember(notAddedValue.AsSpan());
+
+            // Assert
+            isMember.Should().BeFalse();
+        }
+
+        [Fact]
+        public void IsMember_SpanOverload_MatchesByteArrayOverload()
+        {
+            // Arrange
+            var testValues = new[]
+            {
+                Encoding.UTF8.GetBytes("test1"),
+                Encoding.UTF8.GetBytes("test2"),
+                Encoding.UTF8.GetBytes("test3")
+            };
+            var filter = new TestableXorFilter(testValues);
+
+            // Act & Assert - Both overloads should return the same results
+            foreach (var value in testValues)
+            {
+                var byteArrayResult = filter.IsMember(value);
+                var spanResult = filter.IsMember(value.AsSpan());
+                spanResult.Should().Be(byteArrayResult);
+                spanResult.Should().BeTrue();
+            }
+
+            // Test with values not in the filter
+            var notAddedValues = new[]
+            {
+                Encoding.UTF8.GetBytes("not_added1"),
+                Encoding.UTF8.GetBytes("not_added2")
+            };
+            foreach (var value in notAddedValues)
+            {
+                var byteArrayResult = filter.IsMember(value);
+                var spanResult = filter.IsMember(value.AsSpan());
+                spanResult.Should().Be(byteArrayResult);
+            }
+        }
+
+        [Fact]
+        public void IsMember_SpanOverload_EmptySpan_Works()
+        {
+            // Arrange
+            var values = new byte[][] { Array.Empty<byte>() };
+            var filter = new TestableXorFilter(values);
+
+            // Act
+            var isMember = filter.IsMember(ReadOnlySpan<byte>.Empty);
+
+            // Assert
+            isMember.Should().BeTrue();
+        }
+
+        [Fact]
+        public void IsMember_SpanOverload_LargeDataset_PerformanceTest()
+        {
+            // Arrange
+            var values = Enumerable.Range(0, 1000)
+                .Select(i => Encoding.UTF8.GetBytes($"value_{i}"))
+                .ToArray();
+            var filter = new TestableXorFilter(values);
+
+            // Act - Test with both overloads
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+            for (int i = 0; i < 1000; i++)
+            {
+                filter.IsMember(values[i].AsSpan());
+            }
+            stopwatch.Stop();
+
+            // Assert
+            stopwatch.ElapsedMilliseconds.Should().BeLessThan(1000); // Should be fast
         }
     }
 }

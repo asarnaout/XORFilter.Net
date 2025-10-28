@@ -4,14 +4,14 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <PackageId>XORFilterDotNet</PackageId>
-    <Version>1.0.8</Version>
+    <Version>1.1.0</Version>
     <Authors>asarnaout</Authors>
     <RepositoryUrl>https://github.com/asarnaout/XORFilter.Net</RepositoryUrl>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageReleaseNotes>First stable Release.</PackageReleaseNotes>
-    <PackageTags>xor-filter;bloom-filter;probabilistic;data-structure;filter;hash;performance;memory-efficient;fast;csharp;dotnet</PackageTags>
-    <Description>A high-performance XOR filter implementation for .NET providing fast membership testing with low false positive rates and memory efficiency.</Description>
+    <PackageReleaseNotes>Added zero-allocation ReadOnlySpan&lt;byte&gt; API for IsMember queries. The new span-based overload eliminates heap allocations in hot paths, while the byte[] overload remains for backward compatibility (marked obsolete with warning). All internal operations now use spans for maximum performance.</PackageReleaseNotes>
+    <PackageTags>xor-filter;bloom-filter;probabilistic;data-structure;filter;hash;performance;memory-efficient;fast;csharp;dotnet;span;zero-allocation</PackageTags>
+    <Description>A high-performance XOR filter implementation for .NET providing fast membership testing with low false positive rates and memory efficiency. Now with zero-allocation ReadOnlySpan&lt;byte&gt; API.</Description>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="HashDepot" Version="2.0.3" />
