@@ -278,6 +278,7 @@ namespace XORFilter.Net.Tests
         }
 
         [Fact]
+        [Trait("Category", "Performance")]
         public void Constructor_LargeValueSet_HandlesEfficiently()
         {
             // Arrange
@@ -629,6 +630,7 @@ namespace XORFilter.Net.Tests
         }
 
         [Fact]
+        [Trait("Category", "Performance")]
         public void IsMember_SpanOverload_LargeDataset_PerformanceTest()
         {
             // Arrange

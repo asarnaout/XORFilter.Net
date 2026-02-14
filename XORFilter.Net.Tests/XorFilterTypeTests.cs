@@ -250,6 +250,7 @@ namespace XORFilter.Net.Tests
         }
 
         [Fact]
+        [Trait("Category", "Performance")]
         public void BuildFrom_LargeDataSet_CompletesWithinReasonableTime()
         {
             // Arrange

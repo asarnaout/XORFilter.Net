@@ -74,6 +74,7 @@ namespace XORFilter.Net.Tests
         }
 
         [Fact]
+        [Trait("Category", "Performance")]
         public void BuildFrom_VeryLargeByteArrays_HandlesCorrectly()
         {
             // Arrange
@@ -352,6 +353,7 @@ namespace XORFilter.Net.Tests
         [InlineData(1000)]
         [InlineData(10000)]
         [InlineData(50000)]
+        [Trait("Category", "Performance")]
         public void BuildFrom_LargeDataSets_CompletesWithinTimeLimit(int size)
         {
             // Arrange
@@ -379,6 +381,7 @@ namespace XORFilter.Net.Tests
         }
 
         [Fact]
+        [Trait("Category", "Performance")]
         public void MemoryUsage_LargeFilter_RemainsReasonable()
         {
             // Arrange
@@ -417,6 +420,7 @@ namespace XORFilter.Net.Tests
         }
 
         [Fact]
+        [Trait("Category", "Performance")]
         public void QueryPerformance_ManyQueries_CompletesQuickly()
         {
             // Arrange
@@ -443,6 +447,7 @@ namespace XORFilter.Net.Tests
         }
 
         [Fact]
+        [Trait("Category", "Performance")]
         public void Construction_DoesNotHangIndefinitely()
         {
             // Arrange - Use a pattern that might cause construction issues
@@ -504,6 +509,7 @@ namespace XORFilter.Net.Tests
         }
 
         [Fact]
+        [Trait("Category", "Performance")]
         public void BuildFrom_ConstructionRetryMechanism_WorksCorrectly()
         {
             // Arrange - Create a moderately sized set that might require retries
@@ -564,6 +570,7 @@ namespace XORFilter.Net.Tests
     public class AntiHangTests
     {
         [Fact(Timeout = 30000)] // 30 second timeout
+        [Trait("Category", "Performance")]
         public void BuildFrom_RepeatedHashPatterns_DoesNotHang()
         {
             // Arrange - Create values that produce similar hash patterns
@@ -585,6 +592,7 @@ namespace XORFilter.Net.Tests
         }
 
         [Fact(Timeout = 30000)] // 30 second timeout
+        [Trait("Category", "Performance")]
         public void BuildFrom_PowerOfTwoSizes_DoesNotHang()
         {
             // Arrange - Power of 2 sizes might cause issues in hash function distribution
@@ -609,6 +617,7 @@ namespace XORFilter.Net.Tests
         }
 
         [Fact(Timeout = 30000)] // 30 second timeout
+        [Trait("Category", "Performance")]
         public void BuildFrom_WorstCaseScenario_DoesNotHang()
         {
             // Arrange - Create a scenario that's likely to require many peeling attempts
